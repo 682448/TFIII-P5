@@ -2,11 +2,11 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define tiempo (float)(1)//Tiempo final
+#define tiempo (float)(1000)//Tiempo final
 #define dt (float)(0.1)//Paso en tiempo
-#define Temperatura (float)(5)//Temperatura final
-#define dT (float)(0.5)//Paso en Temperatura
-#define trayec (int)(1)
+#define Temperatura (float)(10)//Temperatura final
+#define dT (float)(1)//Paso en Temperatura
+#define trayec (int)(10000)
 #define M   (float)(1.0)//Masa
 #define Eta (float)(1.0)//Coeficiente viscosidad del medio
 #define K   (float)(0.0)//Coeficiente del "muelle" para el oscilador
@@ -28,21 +28,23 @@ unsigned int Wheel[256],ir1;
 Ficheros
 ->En D1 se guardan los valores de temperatura, energía cinética y energía potencial
 Este fichero esta pensado para comprobar a partir de el la relación de Einstein y el teorema de equipartición de la energía
-->En D2 se guarda 
+->En D2 se guarda
 Esta pensado para comprobar la relación de fluctuación disipación
 */
-FILE *D1;  
+FILE *D1;
 //FILE *D2;
 int main()
 {
     ini_ran(123456789);
-    D1=fopen("OAS_Rk_T-E_cin-D.txt","w");
+    D1=fopen("VE_Equiparticion.txt","w");
     //D2=fopen("2.txt","w");
     /*Posición, velocidad, array de promedios para posición y velocidad, array de numeros aleatorios para el box_muller (ahorra tiempo guardarlo en memoria)*/
     float x,v,D[2],epsilon,**zz;
     /*Colección de constantes físicas, ahorra tiempo guardarlas en memoria y usarlas cada que calcularlas (producto a producto, suma a suma)  miles de veces*/
     register float temp,temp1,temp2;temp=K/M;temp1=Eta/M,temp2=0.5*dt;
-
+    register float a,b;
+    a=(1-0.5*temp1*dt)/(1+0.5*temp1*dt);
+    b=1/(1+0.5*temp1*dt);
     /*Para cada temperatura uso los mismos números aletorios en el box_muller(0,1) por ello guardo en memoria con malloc()*/
 	zz = (float **)malloc(trayec*sizeof(float*));
 	for (int i=0;i<trayec;i++)zz[i]=(float*)malloc((int)(tiempo/dt)*sizeof(float));
@@ -56,13 +58,9 @@ int main()
             x=v=0;
             for(int t=0;t<(int)(tiempo/dt);t++)/*Integración mediante algoritmo rk-estocástico 2 orden*/
             {
-                register float g11,g12,g21,g22;
-                g11=v+epsilon*zz[k][t];  /*Calculo las funciones g11,g12,... para el rk estoc�stico*/
-                g12=-temp1*g11-temp*x;
-                g21=v+g12*dt;
-                g22=-temp1*g21-temp*(x+g11*dt);
-                x=x+temp2*(g11+g21);    /*Calculo posiciones y velocidades en cada momento*/
-                v=v+temp2*(g12+g22)+epsilon*zz[k][t];
+                register float x_a=x;
+                x=x+b*dt*v-b*0.5*dt*dt*temp*x+b*0.5*dt*epsilon*zz[k][t]/M;    /*Calculo posiciones y velocidades en cada momento*/
+                v=a*v+dt*0.5*(-a*temp*x_a-temp*x)+b/M*epsilon*zz[k][t];
             }
             D[0]+=v*v; D[1]+=x*x;
         }

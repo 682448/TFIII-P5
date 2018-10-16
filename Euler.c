@@ -5,8 +5,8 @@
 #define tiempo (float)(1000)//Tiempo final
 #define dt (float)(0.1)//Paso en tiempo
 #define Temperatura (float)(10)//Temperatura final
-#define dT (float)(0.5)//Paso en Temperatura
-#define trayec (int)(20000)
+#define dT (float)(1)//Paso en Temperatura
+#define trayec (int)(10000)
 #define M   (float)(1.0)//Masa
 #define Eta (float)(1.0)//Coeficiente viscosidad del medio
 #define K   (float)(0.0)//Coeficiente del "muelle" para el oscilador
@@ -28,15 +28,15 @@ unsigned int Wheel[256],ir1;
 Ficheros
 ->En D1 se guardan los valores de temperatura, energía cinética y energía potencial
 Este fichero esta pensado para comprobar a partir de el la relación de Einstein y el teorema de equipartición de la energía
-->En D2 se guarda 
+->En D2 se guarda
 Esta pensado para comprobar la relación de fluctuación disipación
 */
-FILE *D1;  
+FILE *D1;
 //FILE *D2;
 int main()
 {
     ini_ran(123456789);
-    D1=fopen("OAS_Euler_T-E_cin-D.txt","w");
+    D1=fopen("Euler_Equiparticion.txt","w");
     //D2=fopen("2.txt","w");
     /*Posición, velocidad, array de promedios para posición y velocidad, array de numeros aleatorios para el box_muller (ahorra tiempo guardarlo en memoria)*/
     float x,v,D[2],epsilon,**zz;
