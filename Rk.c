@@ -2,16 +2,17 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define tiempo (float)(1000)//Tiempo final
-#define dt (float)(0.1)//Paso en tiempo
-#define Temperatura (float)(10)//Temperatura final
-#define dT (float)(1)//Paso en Temperatura
-#define trayec (int)(10000)
-#define M   (float)(1.0)//Masa
-#define Eta (float)(1.0)//Coeficiente viscosidad del medio
-#define K   (float)(0.0)//Coeficiente del "muelle" para el oscilador
-//Se tomará que la constante de Bolztmann tiene valor unitario
 
+#define tiempo (float)(100)//Tiempo final aunque aquí en realidad es adimensional
+#define dt (float)(0.01)//Paso en tiempo
+#define Temperatura (float)(1)//Esto en realidad es energía pues hago T*k_b
+#define dT (float)(0.001)//Paso de T*k_b
+#define trayec (int)(10000)
+
+#define K   (float)(1)//Coeficiente del "muelle" para el oscilador
+#define M   (float)(1)//Masa
+#define Eta (float)(1)//Coeficiente viscosidad del medio
+#define chi (float)(Eta/2/sqrt(K*M))//El coeficiente
 /*
 ->ini_ran(int SEMILLA) inicia el array "Wheel" usado para obtener los números aleatorios
 ->float RandomC(float Max,float Min) implementa el método Parisi-rapuano  descorrelacionando los números guardados en Wheel
@@ -39,35 +40,37 @@ int main()
     D1=fopen("Rk_Equiparticion.txt","w");
     //D2=fopen("2.txt","w");
     /*Posición, velocidad, array de promedios para posición y velocidad, array de numeros aleatorios para el box_muller (ahorra tiempo guardarlo en memoria)*/
-    float x,v,D[2],epsilon,**zz;
-    /*Colección de constantes físicas, ahorra tiempo guardarlas en memoria y usarlas cada que calcularlas (producto a producto, suma a suma)  miles de veces*/
-    register float temp,temp1,temp2;temp=K/M;temp1=Eta/M,temp2=0.5*dt;
+    float x,v,D[2],**zz;
 
     /*Para cada temperatura uso los mismos números aletorios en el box_muller(0,1) por ello guardo en memoria con malloc()*/
 	zz = (float **)malloc(trayec*sizeof(float*));
 	for (int i=0;i<trayec;i++)zz[i]=(float*)malloc((int)(tiempo/dt)*sizeof(float));
-    for(int k=0;k<trayec;k++)for(int t=0;t<(int)(tiempo/dt);t++)zz[k][t]=box_muller(0,1);
+    for(int k=0;k<trayec;k++)for(int t=0;t<(int)(tiempo/dt);t++)zz[k][t]=sqrt(4*chi*dt)*box_muller(0,1);
 
-    for(float T=0;T<=Temperatura;T+=dT)/*Para varias temperaturas*/
-    {
-        D[0]=D[1]=0;epsilon=pow((dt*2*T*temp1/M),0.5);
+
+        D[0]=D[1]=0;
         for(int k=0;k<trayec;k++)
         {
-            x=v=0;
+            x=0;  v=1;
+
             for(int t=0;t<(int)(tiempo/dt);t++)/*Integración mediante algoritmo rk-estocástico 2 orden*/
             {
                 register float g11,g12,g21,g22;
-                g11=v+epsilon*zz[k][t];  /*Calculo las funciones g11,g12,... para el rk estoc�stico*/
-                g12=-temp1*g11-temp*x;
+                g11=v+zz[k][t];  /*Calculo las funciones g11,g12,... para el rk estoc�stico*/
+                g12=-2*chi*g11-x;
                 g21=v+g12*dt;
-                g22=-temp1*g21-temp*(x+g11*dt);
-                x=x+temp2*(g11+g21);    /*Calculo posiciones y velocidades en cada momento*/
-                v=v+temp2*(g12+g22)+epsilon*zz[k][t];
+                g22=-2*chi*(v+g12*dt)-x-g11*dt;
+                x=x+0.5*dt*(g11+g21);    /*Calculo posiciones y velocidades en cada momento*/
+                v=v+0.5*dt*(g12+g22)+zz[k][t];
             }
             D[0]+=v*v; D[1]+=x*x;
+
         }
-        //Guardo la temperatura, el promedio de energía cinética y energía potencial
-        fprintf(D1,"%f\t %f\t %f\n",T,0.5*M*D[0]/(float)(trayec),0.5*M*D[1]/(float)(trayec)/2/tiempo);
+
+    for(float T=0;T<=Temperatura;T+=dT)/*Para varias temperaturas*/
+    {
+      //Guardo la temperatura, el promedio de energía cinética y energía potencial
+      fprintf(D1,"%.3f\t %.3f\t %.3f\n",T,0.5*T*D[0]/(float)(trayec),0.5*T*D[1]/(float)(trayec));
     }
 
     fclose(D1);
