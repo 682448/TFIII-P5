@@ -21,6 +21,7 @@
 void ini_ran(int SEMILLA);
 float RandomC(float Max,float Min);
 float box_muller(float m, float s);
+float F(float x);
 
 /*Definición de los parámetros usados en float ini_ran(int SEMILLA) y RandomC(float Max,float Min)  para descorrelacionar los números generados con rand()*/
 unsigned char ind_ran,ig1,ig2,ig3;
@@ -33,39 +34,40 @@ Este fichero esta pensado para comprobar a partir de el la relación de Einstein
 Esta pensado para comprobar la relación de fluctuación disipación
 */
 FILE *D1;
-//FILE *D2;
+FILE *D2;
 int main()
 {
     ini_ran(123456789);
     D1=fopen("Rk_Equiparticion.txt","w");
-    //D2=fopen("2.txt","w");
+    D2=fopen("Rk_txv.txt","w");
     /*Posición, velocidad, array de promedios para posición y velocidad, array de numeros aleatorios para el box_muller (ahorra tiempo guardarlo en memoria)*/
     float x,v,D[2],**zz;
 
     /*Para cada temperatura uso los mismos números aletorios en el box_muller(0,1) por ello guardo en memoria con malloc()*/
-	zz = (float **)malloc(trayec*sizeof(float*));
-	for (int i=0;i<trayec;i++)zz[i]=(float*)malloc((int)(tiempo/dt)*sizeof(float));
+  	zz = (float **)malloc(trayec*sizeof(float*));
+  	for (int i=0;i<trayec;i++)zz[i]=(float*)malloc((int)(tiempo/dt)*sizeof(float));
     for(int k=0;k<trayec;k++)for(int t=0;t<(int)(tiempo/dt);t++)zz[k][t]=sqrt(4*chi*dt)*box_muller(0,1);
 
 
-        D[0]=D[1]=0;
-        for(int k=0;k<trayec;k++)
+    D[0]=D[1]=0;
+    for(int k=0;k<trayec;k++)
+    {
+        x=0;  v=1;
+
+        for(int t=0;t<(int)(tiempo/dt);t++)/*Integración mediante algoritmo rk-estocástico 2 orden*/
         {
-            x=0;  v=1;
+            register float g11,g12,g21,g22;
+            g11=v+zz[k][t];  /*Calculo las funciones g11,g12,... para el rk estoc�stico*/
+            g12=-2*chi*g11-F(x);
+            g21=v+g12*dt;
+            g22=-2*chi*(v+g12*dt)-F(x+g11*dt);
+            x=x+0.5*dt*(g11+g21);    /*Calculo posiciones y velocidades en cada momento*/
+            v=v+0.5*dt*(g12+g22)+zz[k][t];
 
-            for(int t=0;t<(int)(tiempo/dt);t++)/*Integración mediante algoritmo rk-estocástico 2 orden*/
-            {
-                register float g11,g12,g21,g22;
-                g11=v+zz[k][t];  /*Calculo las funciones g11,g12,... para el rk estoc�stico*/
-                g12=-2*chi*g11-x;
-                g21=v+g12*dt;
-                g22=-2*chi*(v+g12*dt)-x-g11*dt;
-                x=x+0.5*dt*(g11+g21);    /*Calculo posiciones y velocidades en cada momento*/
-                v=v+0.5*dt*(g12+g22)+zz[k][t];
-            }
-            D[0]+=v*v; D[1]+=x*x;
-
+            if(k==0){fprintf(D2,"%.3f\t %.3f\t %.3f\n",t*dt,x,v);}
         }
+        D[0]+=v*v; D[1]+=x*x;
+    }
 
     for(float T=0;T<=Temperatura;T+=dT)/*Para varias temperaturas*/
     {
@@ -74,9 +76,11 @@ int main()
     }
 
     fclose(D1);
-    //fclose(D2);
+    fclose(D2);
     return 0;
 }
+
+float F(float x){return x;}
 
 void ini_ran(int SEMILLA)
 {
