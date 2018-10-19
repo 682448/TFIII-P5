@@ -7,7 +7,7 @@
 #define dt (float)(0.01)//Paso en tiempo
 #define Temperatura (float)(1)//Esto en realidad es energía pues hago T*k_b
 #define dT (float)(0.001)//Paso de T*k_b
-#define trayec (int)(10000)
+#define trayec (int)(1000)
 
 #define K   (float)(1)//Coeficiente del "muelle" para el oscilador
 #define M   (float)(1)//Masa
@@ -41,12 +41,12 @@ int main()
     D1=fopen("Rk_Equiparticion.txt","w");
     D2=fopen("Rk_txv.txt","w");
     /*Posición, velocidad, array de promedios para posición y velocidad, array de numeros aleatorios para el box_muller (ahorra tiempo guardarlo en memoria)*/
-    float x,v,D[2],**zz;
+    float x,v,D[2],*z;
 
     /*Para cada temperatura uso los mismos números aletorios en el box_muller(0,1) por ello guardo en memoria con malloc()*/
-  	zz = (float **)malloc(trayec*sizeof(float*));
-  	for (int i=0;i<trayec;i++)zz[i]=(float*)malloc((int)(tiempo/dt)*sizeof(float));
-    for(int k=0;k<trayec;k++)for(int t=0;t<(int)(tiempo/dt);t++)zz[k][t]=sqrt(4*chi*dt)*box_muller(0,1);
+  	z = (float *)malloc((int)(tiempo/dt)*trayec*sizeof(float));
+
+    for(int k=0;k<trayec;k++)for(int t=0;t<(int)(tiempo/dt);t++)z[k*(int)(tiempo/dt)+t]=sqrt(4*chi*dt)*box_muller(0,1);
 
 
     D[0]=D[1]=0;
@@ -57,12 +57,12 @@ int main()
         for(int t=0;t<(int)(tiempo/dt);t++)/*Integración mediante algoritmo rk-estocástico 2 orden*/
         {
             register float g11,g12,g21,g22;
-            g11=v+zz[k][t];  /*Calculo las funciones g11,g12,... para el rk estoc�stico*/
+            g11=v+z[k*(int)(tiempo/dt)+t];  /*Calculo las funciones g11,g12,... para el rk estoc�stico*/
             g12=-2*chi*g11-F(x);
             g21=v+g12*dt;
             g22=-2*chi*(v+g12*dt)-F(x+g11*dt);
             x=x+0.5*dt*(g11+g21);    /*Calculo posiciones y velocidades en cada momento*/
-            v=v+0.5*dt*(g12+g22)+zz[k][t];
+            v=v+0.5*dt*(g12+g22)+z[k*(int)(tiempo/dt)+t];
 
             if(k==0){fprintf(D2,"%.3f\t %.3f\t %.3f\n",t*dt,x,v);}
         }
