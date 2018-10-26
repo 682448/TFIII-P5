@@ -1,0 +1,13 @@
+Oscilador_Pruebas/
+Oscilador/*.out
+DoblePozoRk/*.out
+Proteina/*.out
+*.out
+Oscilador/*.csv
+DoblePozoRk/*.csv
+Polimero/*.csv
+*csv
+Oscilador/*.txt
+DoblePozoRk/*.txt
+Polimero/*.txt
+*txt
