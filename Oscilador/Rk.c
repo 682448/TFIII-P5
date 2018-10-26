@@ -3,14 +3,14 @@
 #include <math.h>
 
 
-#define tiempo (float)(10000)//Tiempo final aunque aquí en realidad es adimensional
-#define dt (float)(0.001)//Paso en tiempo
-#define Temperatura (float)(0.1)//Esto en realidad es energía pues hago T*k_b
+#define tiempo (float)(1000)//Tiempo final aunque aquí en realidad es adimensional
+#define dt (float)(0.01)//Paso en tiempo
+#define Temperatura (float)(1)//Esto en realidad es energía pues hago T*k_b
 #define dT (float)(0.001)//Paso de T*k_b
 
 #define K   (float)(1)//Coeficiente del "muelle" para el oscilador
 #define M   (float)(1)//Masa
-#define Eta (float)(1)//Coeficiente viscosidad del medio
+#define Eta (float)(10)//Coeficiente viscosidad del medio
 #define chi (float)(Eta/2/sqrt(K*M))//El coeficiente
 /*
 ->ini_ran(int SEMILLA) inicia el array "Wheel" usado para obtener los números aleatorios
@@ -37,9 +37,9 @@ FILE *D2;
 int main()
 {
     ini_ran(123456789);
-    D1=fopen("Rk_Equiparticion_dt00001.csv","w");
-    D2=fopen("Rk_Hist_dt00001.csv","w");                                                              /*Posición, velocidad, array de promedios para posición y velocidad, array de numeros aleatorios para el box_muller (ahorra tiempo guardarlo en memoria)*/
-    fprintf(D2,"Posicion,Velocidad,z\n");
+    D1=fopen("Rk_Eta10_Equi.csv","w");
+    D2=fopen("Rk_Eta10.csv","w");                                                              /*Posición, velocidad, array de promedios para posición y velocidad, array de numeros aleatorios para el box_muller (ahorra tiempo guardarlo en memoria)*/
+    fprintf(D2,"Tiempo,Posicion,Velocidad\n");
     float x,v,D[2];
 
     D[0]=D[1]=0;
@@ -55,7 +55,7 @@ int main()
         x=x+0.5*dt*(g11+g21);                                                            /*Calculo posiciones y velocidades en cada momento*/
         v=v+0.5*dt*(g12+g22)+z;
         //fprintf(D2,"%.3f, %.3f, %.3f, %.3f\n",t*dt,x,v,z);
-        fprintf(D2," %.3f, %.3f, %.3f\n",x,v,z);
+        fprintf(D2,"%.3f, %.3f, %.3f\n",t*dt,x,v);
         D[0]+=v*v; D[1]+=x*x;
     }
 
