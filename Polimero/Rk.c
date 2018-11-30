@@ -3,16 +3,14 @@
 #include <math.h>
 
 
-#define tiempo (float)(100)//Tiempo final aunque aquí en realidad es adimensional
-#define dt (float)(0.01)//Paso en tiempo
+#define tiempo (float)(1E4)//Tiempo final aunque aquí en realidad es adimensional
+#define dt (float)(1E-2)//Paso en tiempo
 #define Temperatura (float)(1)//Esto en realidad es energía pues hago T*k_b
 #define dT (float)(0.001)//Paso de T*k_b
-#define trayec (int)(1000)
 
-#define N   (float)(20)//Número de elemeros de polimero
+#define Eta (float)(0.01)//Coeficiente viscosidad del medio
 #define K   (float)(1)//Coeficiente del "muelle" para el oscilador
 #define M   (float)(1)//Masa
-#define Eta (float)(1)//Coeficiente viscosidad del medio
 #define chi (float)(Eta/2/sqrt(K*M))//El coeficiente
 /*
 ->ini_ran(int SEMILLA) inicia el array "Wheel" usado para obtener los números aleatorios
@@ -27,7 +25,6 @@ float F(float x);
 /*Definición de los parámetros usados en float ini_ran(int SEMILLA) y RandomC(float Max,float Min)  para descorrelacionar los números generados con rand()*/
 unsigned char ind_ran,ig1,ig2,ig3;
 unsigned int Wheel[256],ir1;
-float Polimero[12*N+2];
 /*
 Ficheros
 ->En D1 se guardan los valores de temperatura, energía cinética y energía potencial
@@ -40,27 +37,32 @@ FILE *D2;
 int main()
 {
     ini_ran(123456789);
-    D1=fopen("Rk_Equiparticion.txt","w");
-    D2=fopen("Rk_txv.txt","w");                                                              /*Posición, velocidad, array de promedios para posición y velocidad, array de numeros aleatorios para el box_muller (ahorra tiempo guardarlo en memoria)*/
+    D1=fopen("Eta0.01_Equi.csv","w");
+    D2=fopen("Eta0.01.csv","w");                                                              /*Posición, velocidad, array de promedios para posición y velocidad, array de numeros aleatorios para el box_muller (ahorra tiempo guardarlo en memoria)*/
+    fprintf(D2,"Tiempo,Posicion,Velocidad\n");
     float x,v,D[2];
 
     D[0]=D[1]=0;
-    for(int k=0;k<trayec;k++)
-    {
-        Polimero[N+1]=Polimero[N+2]=0;  Polimero[N+3]=Polimero[N+4]=Polimero[N+5]=1;
+    x=0;  v=1;
 
-        for(int t=0;t<(int)(tiempo/dt/2);t++ ){                                                 /*Integración mediante algoritmo rk-estocástico 2 orden*/
-          evolucion(Polimero,Polimero+6*N);
-          evolucion(Polimero+6*N,Polimero);
-          //  if(k==0){fprintf(D2,"%.3f\t %.3f\t %.3f\n",t*dt,x,v);}
-        }
+    for(int t=0;t<(int)(tiempo/dt);t++ )                                                 /*Integración mediante algoritmo rk-estocástico 2 orden*/
+    {
+        register float g11,g12,g21,g22,z; z=sqrt(4*chi*dt)*Gauss(0,1);
+        g11=v+z;                                                                         /*Calculo las funciones g11,g12,... para el rk estoc�stico*/
+        g12=-2*chi*g11+F(x);
+        g21=v+g12*dt;
+        g22=-2*chi*(v+g12*dt)+F(x+g11*dt);
+        x=x+0.5*dt*(g11+g21);                                                            /*Calculo posiciones y velocidades en cada momento*/
+        v=v+0.5*dt*(g12+g22)+z;
+        //fprintf(D2,"%.3f, %.3f, %.3f, %.3f\n",t*dt,x,v,z);
+        fprintf(D2,"%.3f, %.3f, %.3f\n",t*dt,x,v);
         D[0]+=v*v; D[1]+=x*x;
     }
-
+    fprintf(D1,"Temperatura,Cinetica,Potencial\n");
     for(float T=0;T<=Temperatura;T+=dT)/*Para varias temperaturas*/
     {
       //Guardo la temperatura, el promedio de energía cinética y energía potencial
-      fprintf(D1,"%.3f\t %.3f\t %.3f\n",T,0.5*T*D[0]/(float)(trayec),0.5*T*D[1]/(float)(trayec));
+      fprintf(D1,"%.3f, %.3f, %.3f\n",T,0.5*T*D[0]/(int)(tiempo/dt),0.5*T*D[1]/(int)(tiempo/dt));
     }
 
     fclose(D1);
@@ -68,25 +70,17 @@ int main()
     return 0;
 }
 
-float evolucion(float *P_in,float *P_out){
-  register float g11,g12,g21,g22,z; z=sqrt(4*chi*dt)*Gauss(0,1);
-  g11=v+z;                                                                         /*Calculo las funciones g11,g12,... para el rk estoc�stico*/
-  g12=-2*chi*g11-F(x);
-  g21=v+g12*dt;
-  g22=-2*chi*(v+g12*dt)-F(x+g11*dt);
-  x=x+0.5*dt*(g11+g21);                                                            /*Calculo posiciones y velocidades en cada momento*/
-  v=v+0.5*dt*(g12+g22)+z;
+float F(float x){return -x;}
 
-}
-float F(float x){return x;}
-
-void ini_ran(int SEMILLA){
+void ini_ran(int SEMILLA)
+{
     srand(SEMILLA);
     for(int k=0;k<256;k++)Wheel[k]=(rand()<<16)+rand();
     ind_ran=ig1=ig2=ig3=0;
-  }
+}
 
-float RandomC(float Max,float Min){/*Modifico rand() con Parisi-Rapuano*/
+float RandomC(float Max,float Min)/*Modifico rand() con Parisi-Rapuano*/
+{
     float r;
     ig1=ind_ran-11;ig2=ind_ran-29;ig3=ind_ran-17;
     Wheel[ind_ran]=Wheel[ig1]+Wheel[ig2];
@@ -96,7 +90,8 @@ float RandomC(float Max,float Min){/*Modifico rand() con Parisi-Rapuano*/
     return r;
 }
 
-float Gauss(float m, float s){/*Con media M y varianza s*/
+float Gauss(float m, float s)/*Con media M y varianza s*/
+{
     register float x1, x2, w, y1;
     static float y2;
     static int use_last = 0;

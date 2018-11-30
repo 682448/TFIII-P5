@@ -3,10 +3,16 @@
 #include <math.h>
 
 
-#define tiempo (float)(1E4)//Tiempo final aunque aquí en realidad es adimensional
+#define tiempo (float)(4E4)//Tiempo final aunque aquí en realidad es adimensional
+#define dt (float)(1E-2)//Paso en tiempo
+#define T (float)(10)//Esto en realidad es energía pues hago T*k_b
 #define dT (float)(0.001)//Paso de T*k_b
 
-
+#define B   (float)(1)
+#define K   (float)(1)//Coeficiente del "muelle" para el oscilador
+#define M   (float)(1)//Masa
+#define Eta (float)(0)//Coeficiente viscosidad del medio
+#define chi (float)(2*Eta*T/M/M)//El coeficiente
 /*
 ->ini_ran(int SEMILLA) inicia el array "Wheel" usado para obtener los números aleatorios
 ->float RandomC(float Max,float Min) implementa el método Parisi-rapuano  descorrelacionando los números guardados en Wheel
@@ -31,21 +37,12 @@ FILE *D1;
 FILE *D2;
 int main()
 {
-    float B,Eta,M,T,K,chi,dt;
-    scanf("%f",&T);
-    scanf("%f",&B);
-    scanf("%f",&Eta);
-    scanf("%f",&dt);
-    M=1;
-    K=2*B;
-    chi=2*Eta*T/M/M;
     ini_ran(123456789);
-    D1=fopen("Equiparticion.csv","a+");
-    D2=fopen("Data_Basico.csv","w");
-
+    D1=fopen("Rk_Equiparticion.txt","w");
+    D2=fopen("Rk_txv.txt","w");
     fprintf(D2,"Tiempo,Posicion,Velocidad\n");
     /*Posición, velocidad, array de promedios para posición y velocidad, array de numeros aleatorios para el box_muller (ahorra tiempo guardarlo en memoria)*/
-    float x,v,D[2],EtaOnM,KOnM,PositiveX,NegativeX;
+    float x,v,D[2],EtaOnM,KOnM;
     EtaOnM=Eta/M; KOnM=K/M;
     D[0]=D[1]=0;
     x=0;  v=sqrt(T/M);
@@ -59,8 +56,8 @@ int main()
         g22=-EtaOnM*(v+g12*dt)+F(x+g11*dt,KOnM);
         x=x+0.5*dt*(g11+g21);                                                            /*Calculo posiciones y velocidades en cada momento*/
         v=v+0.5*dt*(g12+g22)+z;
-
-        fprintf(D2,"%.3f, %.3f, %.3f\n",t*dt,x,v);
+        //fprintf(D2,"%.3f, %.3f, %.3f, %.3f\n",t*dt,x,v,z);
+        //fprintf(D2,"%.3f, %.3f, %.3f\n",t*dt,x,v);
         D[0]+=v*v; D[1]+=x*x;
     }
     fprintf(D1,"%.3f, %.3f, %.3f\n",T,0.5*M*D[0]/(int)(tiempo/dt),0.5*K*D[1]/(int)(tiempo/dt));
