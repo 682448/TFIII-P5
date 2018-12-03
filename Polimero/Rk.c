@@ -17,7 +17,7 @@ void ini_ran(int SEMILLA);
 float RandomC(float Max,float Min);
 float Gauss(float m, float s);
 float F(float x);
-void Evoluciona(float t);
+void Evoluciona(float t,int i, int j);
 
 /*Definición de los parámetros usados en float ini_ran(int SEMILLA) y RandomC(float Max,float Min)  para descorrelacionar los números generados con rand()*/
 unsigned char ind_ran,ig1,ig2,ig3;
@@ -33,7 +33,7 @@ FILE *D1;
 FILE *D2;
 
 float Eta,M,K,chi,dt;
-float r[3][1],v[3][1],D[2];;
+float r[3][1],v[3][1],D[2];
 int main()
 {
 
@@ -46,8 +46,19 @@ int main()
     D1=fopen("Eta0.01_Equi.csv","w");
     D2=fopen("Eta0.01.csv","w");                                                              /*Posición, velocidad, array de promedios para posición y velocidad, array de numeros aleatorios para el box_muller (ahorra tiempo guardarlo en memoria)*/
     fprintf(D2,"Tiempo,Posicion,Velocidad\n");
-    r[0][0]=0;  v[0][0]=1;
-    for(int t=0;t<(int)(tiempo/dt);t++) Evoluciona(t);
+    for(int i=0;i<N;i++)for(int j=0;j<1;j++){r[i][j]=0;  v[i][j]=1;}
+
+    for(int t=0;t<(int)(tiempo/dt);t++)
+    {
+      for(int i=0;i<N;i++)
+      {
+        for(int j=0;j<1;j++)
+        {
+          Evoluciona(t,i,j);
+        }
+      }
+    }
+
 
     fprintf(D1,"Temperatura,Cinetica,Potencial\n");
     for(float T=0;T<=Temperatura;T+=dT)/*Para varias temperaturas*/
@@ -63,19 +74,19 @@ int main()
 
 float F(float x){return -x;}
 
-void Evoluciona(float t)
+void Evoluciona(float t,int i,int j)
 {                                                                                     /*Integración mediante algoritmo rk-estocástico 2 orden*/
 
         register float g11,g12,g21,g22,z; z=sqrt(4*chi*dt)*Gauss(0,1);
-        g11=v[0][0]+z;                                                                         /*Calculo las funciones g11,g12,... para el rk estoc�stico*/
-        g12=-2*chi*g11+F(r[0][0]);
-        g21=v[0][0]+g12*dt;
-        g22=-2*chi*(v[0][0]+g12*dt)+F(r[0][0]+g11*dt);
-        r[0][0]=r[0][0]+0.5*dt*(g11+g21);                                                            /*Calculo posiciones y v[0][0]elocidades en cada momento*/
-        v[0][0]=v[0][0]+0.5*dt*(g12+g22)+z;
+        g11=v[i][j]+z;                                                                         /*Calculo las funciones g11,g12,... para el rk estoc�stico*/
+        g12=-2*chi*g11+F(r[i][j]);
+        g21=v[i][j]+g12*dt;
+        g22=-2*chi*(v[i][0]+g12*dt)+F(r[i][j]+g11*dt);
+        r[i][j]=r[i][j]+0.5*dt*(g11+g21);                                                            /*Calculo posiciones y v[0][0]elocidades en cada momento*/
+        v[i][j]=v[i][j]+0.5*dt*(g12+g22)+z;
         //fprintf(D2,"%.3f, %.3f, %.3f, %.3f\n",t*dt,r[0][0],v[0][0],z);
         //fprintf(D2,"%.3f, %.3f, %.3f\n",t*dt,r[0][0],v[0][0]);
-        D[0]+=v[0][0]*v[0][0]; D[1]+=r[0][0]*r[0][0];
+        D[0]+=v[i][j]*v[i][j]; D[1]+=r[i][j]*r[i][j];
 }
 
 void ini_ran(int SEMILLA)
