@@ -3,15 +3,11 @@
 #include <math.h>
 
 
-#define tiempo (float)(1E4)//Tiempo final aunque aquí en realidad es adimensional
-#define dt (float)(1E-2)//Paso en tiempo
+#define tiempo (float)(4E4)//Tiempo final aunque aquí en realidad es adimensional
 #define Temperatura (float)(1)//Esto en realidad es energía pues hago T*k_b
-#define dT (float)(0.001)//Paso de T*k_b
+#define dT (float)(0.01)//Paso de T*k_b
+#define N 1
 
-#define Eta (float)(0.01)//Coeficiente viscosidad del medio
-#define K   (float)(1)//Coeficiente del "muelle" para el oscilador
-#define M   (float)(1)//Masa
-#define chi (float)(Eta/2/sqrt(K*M))//El coeficiente
 /*
 ->ini_ran(int SEMILLA) inicia el array "Wheel" usado para obtener los números aleatorios
 ->float RandomC(float Max,float Min) implementa el método Parisi-rapuano  descorrelacionando los números guardados en Wheel
@@ -21,6 +17,7 @@ void ini_ran(int SEMILLA);
 float RandomC(float Max,float Min);
 float Gauss(float m, float s);
 float F(float x);
+void Evoluciona(float t);
 
 /*Definición de los parámetros usados en float ini_ran(int SEMILLA) y RandomC(float Max,float Min)  para descorrelacionar los números generados con rand()*/
 unsigned char ind_ran,ig1,ig2,ig3;
@@ -34,30 +31,24 @@ Esta pensado para comprobar la relación de fluctuación disipación
 */
 FILE *D1;
 FILE *D2;
+
+float Eta,M,K,chi,dt;
+float r[3][1],v[3][1],D[2];;
 int main()
 {
+
+    scanf("%f",&K);
+    scanf("%f",&Eta);
+    scanf("%f",&dt);
+    M=1;
+    chi=Eta/2/sqrt(K*M);
     ini_ran(123456789);
     D1=fopen("Eta0.01_Equi.csv","w");
     D2=fopen("Eta0.01.csv","w");                                                              /*Posición, velocidad, array de promedios para posición y velocidad, array de numeros aleatorios para el box_muller (ahorra tiempo guardarlo en memoria)*/
     fprintf(D2,"Tiempo,Posicion,Velocidad\n");
-    float x,v,D[2];
+    r[0][0]=0;  v[0][0]=1;
+    for(int t=0;t<(int)(tiempo/dt);t++) Evoluciona(t);
 
-    D[0]=D[1]=0;
-    x=0;  v=1;
-
-    for(int t=0;t<(int)(tiempo/dt);t++ )                                                 /*Integración mediante algoritmo rk-estocástico 2 orden*/
-    {
-        register float g11,g12,g21,g22,z; z=sqrt(4*chi*dt)*Gauss(0,1);
-        g11=v+z;                                                                         /*Calculo las funciones g11,g12,... para el rk estoc�stico*/
-        g12=-2*chi*g11+F(x);
-        g21=v+g12*dt;
-        g22=-2*chi*(v+g12*dt)+F(x+g11*dt);
-        x=x+0.5*dt*(g11+g21);                                                            /*Calculo posiciones y velocidades en cada momento*/
-        v=v+0.5*dt*(g12+g22)+z;
-        //fprintf(D2,"%.3f, %.3f, %.3f, %.3f\n",t*dt,x,v,z);
-        fprintf(D2,"%.3f, %.3f, %.3f\n",t*dt,x,v);
-        D[0]+=v*v; D[1]+=x*x;
-    }
     fprintf(D1,"Temperatura,Cinetica,Potencial\n");
     for(float T=0;T<=Temperatura;T+=dT)/*Para varias temperaturas*/
     {
@@ -71,6 +62,21 @@ int main()
 }
 
 float F(float x){return -x;}
+
+void Evoluciona(float t)
+{                                                                                     /*Integración mediante algoritmo rk-estocástico 2 orden*/
+
+        register float g11,g12,g21,g22,z; z=sqrt(4*chi*dt)*Gauss(0,1);
+        g11=v[0][0]+z;                                                                         /*Calculo las funciones g11,g12,... para el rk estoc�stico*/
+        g12=-2*chi*g11+F(r[0][0]);
+        g21=v[0][0]+g12*dt;
+        g22=-2*chi*(v[0][0]+g12*dt)+F(r[0][0]+g11*dt);
+        r[0][0]=r[0][0]+0.5*dt*(g11+g21);                                                            /*Calculo posiciones y v[0][0]elocidades en cada momento*/
+        v[0][0]=v[0][0]+0.5*dt*(g12+g22)+z;
+        //fprintf(D2,"%.3f, %.3f, %.3f, %.3f\n",t*dt,r[0][0],v[0][0],z);
+        //fprintf(D2,"%.3f, %.3f, %.3f\n",t*dt,r[0][0],v[0][0]);
+        D[0]+=v[0][0]*v[0][0]; D[1]+=r[0][0]*r[0][0];
+}
 
 void ini_ran(int SEMILLA)
 {
