@@ -28,9 +28,7 @@ Este fichero esta pensado para comprobar a partir de el la relación de Einstein
 ->En D2 se guarda
 Esta pensado para comprobar la relación de fluctuación disipación
 */
-FILE *D1;
-FILE *D2;
-FILE *D3;
+FILE *D1; FILE *D2; FILE *D3; FILE *D4; FILE *D5;
 int main()
 {
     float B,Eta,M,T,K,chi;
@@ -44,16 +42,19 @@ int main()
     D1=fopen("Equiparticion.csv","a+");
     D2=fopen("Data_Basico.csv","w");
     D3=fopen("Pobabilidades.csv","a+");
-    fprintf(D2,"Tiempo,Posicion,Velocidad\n");
+    D4=fopen("Distribucion_t_pos.csv","a+");
+    D5=fopen("Distribucion_t_neg.csv","a+");
+    //fprintf(D2,"Tiempo,Posicion,Velocidad\n");
     /*Posición, velocidad, array de promedios para posición y velocidad, array de numeros aleatorios para el box_muller (ahorra tiempo guardarlo en memoria)*/
     float x,v,D[3],EtaOnM,KOnM,PositiveX,NegativeX;
-    float prob; prob=0;
+    float prob,t_salto_pos,t_salto_neg,x_ant; prob=t_salto_neg=t_salto_pos=0;
     EtaOnM=Eta/M; KOnM=K/M;
     D[0]=D[1]=D[2]=0;
     x=0;  v=sqrt(T/M);
 
     for(int t=0;t<(int)(tiempo/dt);t++ )                                                 /*Integración mediante algoritmo rk-estocástico 2 orden*/
     {
+        x_ant=x;
         register float g11,g12,g21,g22,z; z=sqrt(chi*dt)*Gauss(0,1);
         g11=v+z;                                                                         /*Calculo las funciones g11,g12,... para el rk estoc�stico*/
         g12=-EtaOnM*g11/M+F(x,KOnM);
@@ -62,16 +63,28 @@ int main()
         x=x+0.5*dt*(g11+g21);                                                            /*Calculo posiciones y velocidades en cada momento*/
         v=v+0.5*dt*(g12+g22)+z;
         if(x>0)prob+=1;
+        if(x_ant>=0&&x>=0)t_salto_pos+=dt;
+        else if(x_ant>=0&&x<0)
+        {
+          fprintf(D4,"%f\n",t_salto_pos);
+          t_salto_pos=0;
+        }
+        if(x_ant<=0&&x<=0)t_salto_neg+=dt;
+        else if(x_ant>=0&&x<0)
+        {
+          fprintf(D5,"%f\n",t_salto_neg);
+          t_salto_neg=0;
+        }
         //fprintf(D2,"%.3f, %.3f, %.3f\n",t*dt,x,v);
+
         D[0]+=v*v; D[1]+=x*x; D[2]=x*x*x*x;
     }
-    fprintf(D3,"%f,%f\n",1-prob/(int)(tiempo/dt), prob/(int)(tiempo/dt));
+    //fprintf(D3,"%f,%f\n",1-prob/(int)(tiempo/dt), prob/(int)(tiempo/dt));
     fprintf(D1,"Temperatura,Cinetica,Potencial\n");
-    fprintf(D1,"%.3f, %.3f, %.3f\n",T,0.5*M*D[0]/(int)(tiempo/dt),0.5*B*(2*D[1]+1-D[2])/(int)(tiempo/dt));
+    //fprintf(D1,"%.3f, %.3f, %.3f\n",T,0.5*M*D[0]/(int)(tiempo/dt),0.5*B*(2*D[1]+1-D[2])/(int)(tiempo/dt));
 
 
-    fclose(D1);
-    fclose(D2);
+    fclose(D1); fclose(D2); fclose(D3); fclose(D4);
     return 0;
 }
 
