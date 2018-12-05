@@ -65,11 +65,11 @@ int main()
     for(int t=0;t<(int)(tiempo/dt);t++)
     {
       crea_copia();
-      for(int i=0;i<N;i++)
+      for(int i=1;i<N-1;i++)
       {
         //printf("-------Particula:%d-----\n",i);
-        //Long_pos=sqrt(pow(r_copy[i][0]-r_copy[i+1][0],2)+pow(r_copy[i][1]-r_copy[i+1][1],2)+pow(r_copy[i][2]-r_copy[i+1][2],2));
-        //Long_ant=sqrt(pow(r_copy[i][0]-r_copy[i-1][0],2)+pow(r_copy[i][1]-r_copy[i-1][1],2)+pow(r_copy[i][2]-r_copy[i-1][2],2));
+        Long_pos=sqrt(pow(r_copy[i][0]-r_copy[i+1][0],2)+pow(r_copy[i][1]-r_copy[i+1][1],2)+pow(r_copy[i][2]-r_copy[i+1][2],2));
+        Long_ant=sqrt(pow(r_copy[i][0]-r_copy[i-1][0],2)+pow(r_copy[i][1]-r_copy[i-1][1],2)+pow(r_copy[i][2]-r_copy[i-1][2],2));
         for(int j=0;j<D;j++)
         {
           //printf("%f\n", r_copy[i][j]);
@@ -91,8 +91,8 @@ int main()
           v2_media+=Acumulador[i][j][1];
         }
     }
-    r2_media/=(int)(N*tiempo/dt);
-    v2_media/=(int)(N*tiempo/dt);
+    r2_media/=(int)((N-2)*tiempo/dt);
+    v2_media/=(int)((N-2)*tiempo/dt);
     for(float T=0;T<=Temperatura;T+=dT)
     {
       //Guardo la temperatura, el promedio de energía cinética y energía potencial
@@ -110,8 +110,8 @@ float F(float r, float r_ant, float r_pos)
   float long_ant,long_pos;
   long_ant=r_ant-r;
   long_pos=r-r_pos;
-  return -K*r;
-  //return -K*(2*r-r_ant-r_pos)-K*B*(long_ant/Long_ant-long_pos/Long_pos);
+  //return -K*r;
+  return -K*(2*r-r_ant-r_pos)-K*B*(long_ant/Long_ant-long_pos/Long_pos);
 }
 
 void Evoluciona(float t,int i,int j)

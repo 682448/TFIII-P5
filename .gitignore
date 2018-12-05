@@ -4,7 +4,6 @@ Proteina/*.out
 *.out
 Oscilador/*.csv
 DoblePozoRk/*.csv
-Polimero/*.csv
 *csv
 Oscilador/*.txt
 DoblePozoRk/*.txt
