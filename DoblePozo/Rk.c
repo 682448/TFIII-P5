@@ -3,7 +3,7 @@
 #include <math.h>
 
 
-#define tiempo (float)(4E5)//Tiempo final aunque aquí en realidad es adimensional
+#define tiempo (float)(4E4)//Tiempo final aunque aquí en realidad es adimensional
 #define dt (float)(1E-2)//Paso en tiempo
 #define dT (float)(0.001)//Paso de T*k_b
 
@@ -30,6 +30,7 @@ Esta pensado para comprobar la relación de fluctuación disipación
 */
 FILE *D1;
 FILE *D2;
+FILE *D3;
 int main()
 {
     float B,Eta,M,T,K,chi;
@@ -42,13 +43,14 @@ int main()
     ini_ran(123456789);
     D1=fopen("Equiparticion.csv","a+");
     D2=fopen("Data_Basico.csv","w");
-
+    D3=fopen("Pobabilidades.csv","a+");
     fprintf(D2,"Tiempo,Posicion,Velocidad\n");
     /*Posición, velocidad, array de promedios para posición y velocidad, array de numeros aleatorios para el box_muller (ahorra tiempo guardarlo en memoria)*/
     float x,v,D[3],EtaOnM,KOnM,PositiveX,NegativeX;
+    float prob; prob=0;
     EtaOnM=Eta/M; KOnM=K/M;
     D[0]=D[1]=D[2]=0;
-    x=0;  v=0;
+    x=0;  v=sqrt(T/M);
 
     for(int t=0;t<(int)(tiempo/dt);t++ )                                                 /*Integración mediante algoritmo rk-estocástico 2 orden*/
     {
@@ -59,10 +61,12 @@ int main()
         g22=-EtaOnM*(v+g12*dt)+F(x+g11*dt,KOnM);
         x=x+0.5*dt*(g11+g21);                                                            /*Calculo posiciones y velocidades en cada momento*/
         v=v+0.5*dt*(g12+g22)+z;
-
-        fprintf(D2,"%.3f, %.3f, %.3f\n",t*dt,x,v);
+        if(x>0)prob+=1;
+        //fprintf(D2,"%.3f, %.3f, %.3f\n",t*dt,x,v);
         D[0]+=v*v; D[1]+=x*x; D[2]=x*x*x*x;
     }
+    fprintf(D3,"%f,%f\n",1-prob/(int)(tiempo/dt), prob/(int)(tiempo/dt));
+    fprintf(D1,"Temperatura,Cinetica,Potencial\n");
     fprintf(D1,"%.3f, %.3f, %.3f\n",T,0.5*M*D[0]/(int)(tiempo/dt),0.5*B*(2*D[1]+1-D[2])/(int)(tiempo/dt));
 
 

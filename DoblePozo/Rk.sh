@@ -16,18 +16,18 @@ $B
 $Eta
 EOF
 
-./Posiciones.py <<EOF
-$Posiciones
-EOF
+#./Posiciones.py <<EOF
+#$Posiciones
+#EOF
 
-./Velocidades.py <<EOF
-$noum2
-EOF
+#./Velocidades.py <<EOF
+#$noum2
+#EOF
 
-./FasEvol.py <<EOF
-$noum3
-$noum4
-EOF
+#./FasEvol.py <<EOF
+#$noum3
+#$noum4
+#EOF
 done
 done
 
