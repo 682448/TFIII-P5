@@ -3,10 +3,10 @@
 #include <math.h>
 
 
-#define tiempo (float)(4E4)//Tiempo final aunque aquí en realidad es adimensional
+#define tiempo (float)(1E4)//Tiempo final aunque aquí en realidad es adimensional
 #define Temperatura (float)(1)//Esto en realidad es energía pues hago T*k_b
 #define dT (float)(0.01)//Paso de T*k_b
-#define N 5
+#define N 64
 #define D 3
 
 /*
@@ -17,7 +17,7 @@
 void ini_ran(int SEMILLA);
 float RandomC(float Max,float Min);
 float Gauss(float m, float s);
-float F(float r, float r_ant, float r_pos);
+float F(float r, float r_ant, float r_pos, int i);
 void Evoluciona(float t,int i, int j);
 void crea_copia();
 /*Definición de los parámetros usados en float ini_ran(int SEMILLA) y RandomC(float Max,float Min)  para descorrelacionar los números generados con rand()*/
@@ -33,9 +33,9 @@ Esta pensado para comprobar la relación de fluctuación disipación
 FILE *D1;
 FILE *D2;
 
-float Eta,M,K,B,chi,dt;
-float r[N][D],v[N][D],Acumulador[N][D][2];
-float r_copy[N][D],Long_ant,Long_pos;
+float EtaOnM,KOnM,B,T,chi,dt;
+float r[N][D],v[N][D],Acumulador[N][D];
+float r_copy[N][D],Long_ant,Long_pos,Long_N;
 int main()
 {
 
@@ -43,12 +43,12 @@ int main()
     //scanf("%f",&B);
     //scanf("%f",&Eta);
     //scanf("%f",&dt);
-    K=1;
     B=1;
-    Eta=1;
-    dt=0.01;
-    M=1;
-    chi=Eta/2/sqrt(K*M);
+    KOnM=1;
+    EtaOnM=1;
+    dt=1E-2;
+    T=0.1;
+    chi=2*EtaOnM*T;
     ini_ran(123456789);
     D1=fopen("EquiparticionOnParticle.csv","w");
     //D2=fopen("Eta0.01.csv","w");
@@ -57,28 +57,39 @@ int main()
     //Posiciones y velocidades iniciales de cada patícula del polimero
     for(int i=0;i<N;i++)for(int j=0;j<D;j++)
     {
-      r[i][j]=i*B; v[i][j]=1;
-      Acumulador[i][j][0]=0;
-      Acumulador[i][j][1]=0;
+      r[i][j]=i*B/sqrt(3); v[i][j]=sqrt(T);
+      Acumulador[i][j];
     }
+    Long_N=0;
 
     for(int t=0;t<(int)(tiempo/dt);t++)
     {
       crea_copia();
-      for(int i=1;i<N-1;i++)
+      for(int i=0;i<N;i++)
       {
         //printf("-------Particula:%d-----\n",i);
-        Long_pos=sqrt(pow(r_copy[i][0]-r_copy[i+1][0],2)+pow(r_copy[i][1]-r_copy[i+1][1],2)+pow(r_copy[i][2]-r_copy[i+1][2],2));
-        Long_ant=sqrt(pow(r_copy[i][0]-r_copy[i-1][0],2)+pow(r_copy[i][1]-r_copy[i-1][1],2)+pow(r_copy[i][2]-r_copy[i-1][2],2));
+        Long_pos=Long_ant=0;
+        for(int k=0;k<D;k++)
+        {
+            Long_pos+=pow(r_copy[i][k]-r_copy[i+1][k],2);
+            Long_ant+=pow(r_copy[i][k]-r_copy[i-1][k],2);
+        }
+
+        Long_pos=sqrt(Long_pos);
+        Long_ant=sqrt(Long_ant);
         for(int j=0;j<D;j++)
         {
           //printf("%f\n", r_copy[i][j]);
           Evoluciona(t,i,j);
+
         }
         //printf("Long_pos: %f",Long_pos);
         //getchar();
+        if(i<N-2)Long_N+=pow((Long_pos-B),2);
+
       }
     }
+
     fprintf(D1,"Temperatura,Cinetica,Potencial\n");
     float r2_media,v2_media;
     r2_media=v2_media=0;
@@ -87,17 +98,13 @@ int main()
     {
       for(int j=0;j<D;j++)
         {
-          r2_media+=Acumulador[i][j][0];
-          v2_media+=Acumulador[i][j][1];
+          v2_media+=Acumulador[i][j];
         }
     }
-    r2_media/=(int)((N-2)*tiempo/dt);
-    v2_media/=(int)((N-2)*tiempo/dt);
-    for(float T=0;T<=Temperatura;T+=dT)
-    {
-      //Guardo la temperatura, el promedio de energía cinética y energía potencial
-      fprintf(D1,"%.3f, %.3f, %.3f\n",T,0.5*T*r2_media,0.5*T*v2_media);
-    }
+    Long_N/=((N-1)*tiempo/dt);
+    v2_media/=(int)(N*tiempo/dt);
+    fprintf(D1,"%.3f, %.3f, %.3f\n",T,0.5*v2_media,0.5*Long_N);
+
 
     fclose(D1);
     fclose(D2);
@@ -105,29 +112,41 @@ int main()
 }
 
 
-float F(float r, float r_ant, float r_pos)
+float F(float r, float r_ant, float r_pos,int i)
 {
   float long_ant,long_pos;
   long_ant=r_ant-r;
   long_pos=r-r_pos;
   //return -K*r;
-  return -K*(2*r-r_ant-r_pos)-K*B*(long_ant/Long_ant-long_pos/Long_pos);
+  if(i==0)
+  {
+    return -KOnM*(r-r_pos)+KOnM*B*long_pos/Long_pos;
+  }
+  else if(i==N-1)
+  {
+    return -KOnM*(r-r_ant)-KOnM*B*long_ant/Long_ant;
+  }
+  else
+  {
+    return -KOnM*(2*r-r_ant-r_pos)-KOnM*B*(long_ant/Long_ant-long_pos/Long_pos);
+  }
 }
 
 void Evoluciona(float t,int i,int j)
 {
-  register float g11,g12,g21,g22,z; z=sqrt(4*chi*dt)*Gauss(0,1);
+  register float g11,g12,g21,g22,z; z=sqrt(chi*dt)*Gauss(0,1);
 
   g11=v[i][j]+z;                                                                         /*Calculo las funciones g11,g12,... para el rk estoc�stico*/
-  g12=-2*chi*g11+F(r_copy[i][j],r_copy[i-1][j],r_copy[i+1][j]);
+  g12=-EtaOnM*g11+F(r_copy[i][j],r_copy[i-1][j],r_copy[i+1][j],i);
   g21=v[i][j]+g12*dt;
-  g22=-2*chi*(v[i][j]+g12*dt)+F(r_copy[i][j]+g11*dt,r_copy[i-1][j],r_copy[i+1][j]);
+  g22=-EtaOnM*(v[i][j]+g12*dt)+F(r_copy[i][j]+g11*dt,r_copy[i-1][j],r_copy[i+1][j],i);
 
   r[i][j]=r[i][j]+0.5*dt*(g11+g21);                                                            /*Calculo posiciones y v[0][0]elocidades en cada momento*/
   v[i][j]=v[i][j]+0.5*dt*(g12+g22)+z;
   //fprintf(D2,"%.3f, %.3f, %.3f, %.3f\n",t*dt,r[0][0],v[0][0],z);
   //fprintf(D2,"%.3f, %.3f, %.3f\n",t*dt,r[0][0],v[0][0]);
-  Acumulador[i][j][0]+=v[i][j]*v[i][j]; Acumulador[i][j][1]+=r[i][j]*r[i][j];
+  Acumulador[i][j]+=v[i][j]*v[i][j];
+
   //printf("%d%d) VAlor:%f\n",i,j, Acumulador[i][j][0]);
 }
 
