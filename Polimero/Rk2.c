@@ -17,7 +17,7 @@
 void ini_ran(int SEMILLA);
 float RandomC(float Max,float Min);
 float Gauss(float m, float s);
-float F(float r, float r_ant, float r_pos, int i);
+float F(float r, float r_ant, float r_pos, int i,int flag);
 void Evoluciona(float t,int i, int j);
 void crea_copia();
 /*Definición de los parámetros usados en float ini_ran(int SEMILLA) y RandomC(float Max,float Min)  para descorrelacionar los números generados con rand()*/
@@ -34,7 +34,7 @@ FILE *D1;
 
 float EtaOnM,KOnM,B,T,chi,dt;
 float r[N][D][10],v[N][D][10],z[N][D];
-float Long_ant,Long_pos,Long_N;
+float Long_ant[N][2],Long_pos[N][2],Long_N;
 int main()
 {
 
@@ -46,7 +46,7 @@ int main()
     KOnM=1;
     EtaOnM=1;
     dt=1E-2;
-    T=1;
+    T=0.2;
 
 
     chi=2*EtaOnM*T;
@@ -66,28 +66,43 @@ int main()
 
     for(int t=0;t<(int)(tiempo/dt);t++)
     {
-      crea_copia();
-      for(int i=0;i<N;i++)for(int j=0;j<D;j++)z[i][j]=sqrt(chi*dt)*Gauss(0,1);
+      for(int i=0;i<N;i++){// Creo los números de distribución gaussiana multiplicados por el factor asociada con el rk
+        for(int j=0;j<D;j++)z[i][j]=sqrt(chi*dt)*Gauss(0,1);
+      }
+      // Este bule inicializa las variable Long_ que luego utilizaré en la fuerza
+      for(int i=0;i<N-1;i++)Long_pos[i][0]=Long_pos[i][1]=Long_ant[i][0]=Long_ant[i][1]=0;
 
-      for(int i=0;i<N;i++)
-      {
-        //printf("-------Particula:%d-----\n",i);
-        Long_pos=Long_ant=0;
-        for(int k=0;k<D;k++)
-        {
-            Long_pos+=pow(r[i][k][1]-r[i+1][k][1],2);
-            Long_ant+=pow(r[i][k][1]-r[i-1][k][1],2);
+      for(int i=0;i<N;i++){// Con este bucle calculo las longitudes relevantes para la función fuerza
+        for(int k;k<D;k++){// Aqui hago la suma a cada una de las dimensiones
+          if(i<=N-1){// Lon_pos no esta bien definido para N
+            Long_pos[i][0]+=pow(r[i][k][1]-r[i+1][k][1],2);
+            Long_pos[i][1]+=pow(r[i][k][1]+dt*(v[i][k][0]+z[i][k])-r[i+1][k][1]-dt*(v[i+1][k][0]+z[i+1][k]),2);
+          }
+          if(i!=0){// Long_ant no esta bien definido para la primera posición
+            Long_ant[i][0]+=pow(r[i][k][1]-r[i-1][k][1],2);
+            Long_ant[i][1]+=pow(r[i][k][1]+dt*(v[i][k][0]+z[i][k])-r[i-1][k][1]-dt*(v[i-1][k][0]+z[i-1][k]),2);
+          }
+        // Deberíamos observar que Long_pos[N]=Long_ant[0]=0
         }
+        // Despues de hacer la raiz tiene dimensión de longitud
+        Long_pos[i][0]=sqrt(Long_pos[i][0]);
+        Long_ant[i][0]=sqrt(Long_ant[i][0]);
+        Long_pos[i][1]=sqrt(Long_pos[i][1]);
+        Long_ant[i][1]=sqrt(Long_ant[i][1]);
+      }
 
-        Long_pos=sqrt(Long_pos);
-        Long_ant=sqrt(Long_ant);
-        for(int j=0;j<D;j++)
-        {
+      crea_copia();
+
+      for(int i=0;i<N;i++){// Hago que recorra todas las partículas
+        //printf("-------Particula:%d-----\n",i);
+        for(int j=0;j<D;j++){// Hago que recorra para cada partícula, cada componente
           Evoluciona(t,i,j);
 
-        }
-        if(i<N-1)Long_N+=pow((Long_pos-B),2);
 
+        }
+        if(i<N-1){// Aqui sumo las longitudes de los muelles, al final la longitud será la suma de longitudes del polimero a lo largo del tiempo
+          Long_N+=pow((Long_pos[i][0]-B),2);
+        }
       }
     }
 
@@ -112,7 +127,7 @@ int main()
 }
 
 
-float F(float r, float r_ant, float r_pos,int i)
+float F(float r, float r_ant, float r_pos,int i,int flag)
 {
   float long_ant,long_pos;
   long_ant=r_ant-r;
@@ -120,15 +135,15 @@ float F(float r, float r_ant, float r_pos,int i)
   //return -K*r;
   if(i==0)
   {
-    return -KOnM*(r-r_pos)+KOnM*B*long_pos/Long_pos;
+    return -KOnM*(r-r_pos)+KOnM*B*long_pos/Long_pos[i][flag];
   }
   else if(i==N-1)
   {
-    return -KOnM*(r-r_ant)-KOnM*B*long_ant/Long_ant;
+    return -KOnM*(r-r_ant)-KOnM*B*long_ant/Long_ant[i][flag];
   }
   else
   {
-    return -KOnM*(2*r-r_ant-r_pos)-KOnM*B*(long_ant/Long_ant-long_pos/Long_pos);
+    return -KOnM*(2*r-r_ant-r_pos)-KOnM*B*(long_ant/Long_ant[i][flag]-long_pos/Long_pos[i][flag]);
   }
 }
 
@@ -137,13 +152,13 @@ void Evoluciona(float t,int i,int j)
   register float g11,g12,g21,g22;
 
   g11=v[i][j][0]+z[i][j];
-  g12=-EtaOnM*g11+F(r[i][j][1],r[i-1][j][1],r[i+1][j][1],i);
+  g12=-EtaOnM*g11+F(r[i][j][1],r[i-1][j][1],r[i+1][j][1],i,0);
   g21=v[i][j][0]+g12*dt;
-  g22=-EtaOnM*(v[i][j][0]+g12*dt)+F(r[i][j][1]+g11*dt,r[i-1][j][1],r[i+1][j][1],i);
+  g22=-EtaOnM*(v[i][j][0]+g12*dt)+F(r[i][j][1]+g11*dt,r[i-1][j][1]+(v[i-1][j][0]+z[i-1][j])*dt,r[i+1][j][1]+(v[i+1][j][0]+z[i+1][j])*dt,i,1);
 
   r[i][j][0]=r[i][j][0]+0.5*dt*(g11+g21);
   v[i][j][0]=v[i][j][0]+0.5*dt*(g12+g22)+z[i][j];
-
+  //printf("%f\n", v[i][j][1]);getchar();
   v[i][j][1]+=v[i][j][0]*v[i][j][0];
 }
 
