@@ -6,7 +6,7 @@
 #define tiempo (float)(5E3)//Tiempo final aunque aquí en realidad es adimensional
 #define Temperatura (float)(1)//Esto en realidad es energía pues hago T*k_b
 #define dT (float)(0.01)//Paso de T*k_b
-#define N 64
+#define N 256
 #define D 3
 
 /*
@@ -41,7 +41,7 @@ int main()
     KOnM=100;
     EtaOnM=1;
     dt=1E-2;
-    T=1;
+    T=0.001;
 
 
     chi=2*EtaOnM*T;
@@ -53,7 +53,7 @@ int main()
     {
         for(int j=0;j<D;j++)
         {
-          r[i][j][0]=i*B/sqrt(3); v[i][j][0]=0;
+          r[i][j][0]=i*B/sqrt(3); v[i][j][0]=sqrt(T);
           v[i][j][2]=0;
         }
     }
@@ -100,7 +100,7 @@ int main()
     }
     Long_N/=((N-1)*tiempo/dt);
     v2_media/=(int)(N*tiempo/dt);
-    fprintf(D1,"%d, %.2f, %.2f, %.2f\n",N,T,0.5*v2_media,0.5*KOnM*Long_N);
+    fprintf(D1,"%d, %.2e, %.2f, %.2f, %.2f, %.1e, %.1e, %.2f, %.2e\n",N,T,B,EtaOnM,KOnM,tiempo,dt,0.5*v2_media,0.5*KOnM*Long_N);
 
 
     fclose(D1);
