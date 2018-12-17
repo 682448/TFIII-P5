@@ -4,11 +4,11 @@ import pandas as pd
 from scipy.optimize import curve_fit
 from pylab import *
 
-# El nombre con el que se guardan las gráficas
+# El nombre con el que se guarda el histograma de posción
 noum=input()
-'''
 # Pongo k_b*T=0.2
-T=0.2
+T=float(input())
+print(T)
 # Cargo los datos
 Data=pd.read_csv('Data_Basico.csv')
 numbins=120
@@ -31,7 +31,7 @@ def gauss(x,A):
 # Hago el ajuste
 popt, pcov = curve_fit(gauss,xData,hist/Area)
 # Los valores de x que tomará la funcion
-xfine = np.linspace(-2,2,500)  
+xfine = np.linspace(-6,6,500)  
 # Grafica de la funcion
 plot(xfine,gauss(xfine,*popt),color='g',lw=3,label='model')
 plt.xlabel('Posición')
@@ -40,4 +40,4 @@ plt.grid(True)
 plt.legend()
 # Guardo la imagen
 plt.savefig(noum)
-'''
+

@@ -3,9 +3,11 @@
 #include <math.h>
 
 
-#define tiempo (float)(1E4)//Tiempo final aunque aquí en realidad es adimensional
-#define dT (float)(0.001)//Paso de T*k_b
-
+#define tiempo (float)(5E3)//Tiempo final aunque aquí en realidad es adimensional
+#define Temperatura (float)(1)//Esto en realidad es energía pues hago T*k_b
+#define dT (float)(0.01)//Paso de T*k_b
+#define N 64
+#define D 3
 
 /*
 ->ini_ran(int SEMILLA) inicia el array "Wheel" usado para obtener los números aleatorios
@@ -15,8 +17,9 @@
 void ini_ran(int SEMILLA);
 float RandomC(float Max,float Min);
 float Gauss(float m, float s);
-float F(float x, float KOnM);
-
+float F(float r, float r_ant, float r_pos, int i,int k);
+void Evoluciona(float t,int i, int j);
+void crea_copia();
 /*Definición de los parámetros usados en float ini_ran(int SEMILLA) y RandomC(float Max,float Min)  para descorrelacionar los números generados con rand()*/
 unsigned char ind_ran,ig1,ig2,ig3;
 unsigned int Wheel[256],ir1;
@@ -28,50 +31,129 @@ Este fichero esta pensado para comprobar a partir de el la relación de Einstein
 Esta pensado para comprobar la relación de fluctuación disipación
 */
 FILE *D1;
-FILE *D2;
+
+float EtaOnM,KOnM,B,T,chi,dt;
+float r[N][D][2],v[N][D][3],z[N][D];
+float Long_ant[2],Long_pos[2],Long_N;
 int main()
 {
-    float B,Eta,M,T,K,chi,dt;
-    scanf("%f",&T);
-    scanf("%f",&B);
-    scanf("%f",&Eta);
-    scanf("%f",&dt);
-    M=1;
-    K=2*B;
-    chi=2*Eta*T/M/M;
+    B=1;
+    KOnM=100;
+    EtaOnM=1;
+    dt=1E-2;
+    T=1;
+
+
+    chi=2*EtaOnM*T;
     ini_ran(123456789);
-    D1=fopen("Equiparticion.csv","a+");
-    D2=fopen("Data_Basico.csv","w");
+    D1=fopen("EquiparticionOnParticle.csv","a+");
 
-    fprintf(D2,"Tiempo,Posicion,Velocidad\n");
-    /*Posición, velocidad, array de promedios para posición y velocidad, array de numeros aleatorios para el box_muller (ahorra tiempo guardarlo en memoria)*/
-    float x,v,D[2],EtaOnM,KOnM,PositiveX,NegativeX;
-    EtaOnM=Eta/M; KOnM=K/M;
-    D[0]=D[1]=0;
-    x=0;  v=sqrt(T/M);
-
-    for(int t=0;t<(int)(tiempo/dt);t++ )                                                 /*Integración mediante algoritmo rk-estocástico 2 orden*/
+    // Doy las condiciones iniciales para la posición y la velocidad
+    for(int i=0;i<N;i++)
     {
-        register float g11,g12,g21,g22,z; z=sqrt(chi*dt)*Gauss(0,1);
-        g11=v+z;                                                                         /*Calculo las funciones g11,g12,... para el rk estoc�stico*/
-        g12=-EtaOnM*g11/M+F(x,KOnM);
-        g21=v+g12*dt;
-        g22=-EtaOnM*(v+g12*dt)+F(x+g11*dt,KOnM);
-        x=x+0.5*dt*(g11+g21);                                                            /*Calculo posiciones y velocidades en cada momento*/
-        v=v+0.5*dt*(g12+g22)+z;
-
-        fprintf(D2,"%.3f, %.3f, %.3f\n",t*dt,x,v);
-        D[0]+=v*v; D[1]+=x*x;
+        for(int j=0;j<D;j++)
+        {
+          r[i][j][0]=i*B/sqrt(3); v[i][j][0]=0;
+          v[i][j][2]=0;
+        }
     }
-    fprintf(D1,"%.3f, %.3f, %.3f\n",T,0.5*M*D[0]/(int)(tiempo/dt),0.5*K*D[1]/(int)(tiempo/dt));
+    Long_N=0;
+
+    for(int t=0;t<(int)(tiempo/dt);t++)
+    {
+      crea_copia();
+      for(int i=0;i<N;i++)for(int j=0;j<D;j++)z[i][j]=sqrt(chi*dt)*Gauss(0,1);
+
+      for(int i=0;i<N;i++)
+      {
+        //printf("-------Particula:%d-----\n",i);
+        Long_pos[0]=Long_pos[1]=Long_ant[0]=Long_ant[1]=0;
+        for(int k=0;k<D;k++){
+            Long_pos[0]+=pow(r[i][k][1]-r[i+1][k][1],2);
+            Long_ant[0]+=pow(r[i][k][1]-r[i-1][k][1],2);
+            Long_pos[1]+=pow(r[i][k][1]+(v[i][k][1]+z[i][k])*dt-r[i+1][k][1]-(v[i+1][k][1]+z[i+1][k])*dt,2);
+            Long_ant[1]+=pow(r[i][k][1]+(v[i][k][1]+z[i][k])*dt-r[i-1][k][1]-(v[i-1][k][1]+z[i-1][k])*dt,2);
+        }
+
+        Long_pos[0]=sqrt(Long_pos[0]);
+        Long_ant[0]=sqrt(Long_ant[0]);
+        Long_pos[1]=sqrt(Long_pos[1]);
+        Long_ant[1]=sqrt(Long_ant[1]);
+        for(int j=0;j<D;j++){
+          Evoluciona(t,i,j);
+        }
+        if(i<N-1)Long_N+=pow((Long_pos[0]-B),2);
+
+      }
+    }
+
+    //fprintf(D1,"N,Temperatura,Cinetica,Potencial\n");
+    float r2_media,v2_media;
+    r2_media=v2_media=0;
+
+    for(int i=0;i<N;i++)
+    {
+      for(int j=0;j<D;j++)
+        {
+          v2_media+=v[i][j][2];
+        }
+    }
+    Long_N/=((N-1)*tiempo/dt);
+    v2_media/=(int)(N*tiempo/dt);
+    fprintf(D1,"%d, %.2f, %.2f, %.2f\n",N,T,0.5*v2_media,0.5*KOnM*Long_N);
 
 
     fclose(D1);
-    fclose(D2);
     return 0;
 }
 
-float F(float x,float KOnM){return -KOnM*x;}
+
+float F(float r, float r_ant, float r_pos,int i,int k)
+{
+  float long_ant,long_pos;
+  long_ant=r_ant-r;
+  long_pos=r-r_pos;
+  //return -K*r;
+  if(i==0)
+  {
+    return -KOnM*(r-r_pos)+KOnM*B*long_pos/Long_pos[k];
+  }
+  else if(i==N-1)
+  {
+    return -KOnM*(r-r_ant)-KOnM*B*long_ant/Long_ant[k];
+  }
+  else
+  {
+    return -KOnM*(2*r-r_ant-r_pos)-KOnM*B*(long_ant/Long_ant[k]-long_pos/Long_pos[k]);
+  }
+}
+
+void Evoluciona(float t,int i,int j)
+{
+  register float g11,g12,g21,g22;
+
+  g11=v[i][j][0]+z[i][j];
+  g12=-EtaOnM*g11+F(r[i][j][1],r[i-1][j][1],r[i+1][j][1],i,0);
+  g21=v[i][j][0]+g12*dt;
+  g22=-EtaOnM*(v[i][j][0]+g12*dt)+F(r[i][j][1]+(v[i][j][0]+z[i][j])*dt,r[i-1][j][1]+(v[i-1][j][0]+z[i-1][j])*dt,r[i+1][j][1]+(v[i+1][j][0]+z[i+1][j])*dt,i,1);
+
+  r[i][j][0]=r[i][j][0]+0.5*dt*(g11+g21);
+  v[i][j][0]=v[i][j][0]+0.5*dt*(g12+g22)+z[i][j];
+
+  v[i][j][2]+=v[i][j][0]*v[i][j][0];
+}
+
+void crea_copia()
+{
+  for(int i=0;i<N;i++)
+  {
+    for(int j=0;j<D;j++)
+    {
+      r[i][j][1]=r[i][j][0];
+      v[i][j][1]=v[i][j][0];
+    }
+  }
+}
 
 void ini_ran(int SEMILLA)
 {
@@ -91,7 +173,7 @@ float RandomC(float Max,float Min)/*Modifico rand() con Parisi-Rapuano*/
     return r;
 }
 
-float Gauss(float m, float s)/*Con media M y varianza s*/
+float Gauss(float m, float s)// Con media M y varianza s
 {
     register float x1, x2, w, y1;
     static float y2;

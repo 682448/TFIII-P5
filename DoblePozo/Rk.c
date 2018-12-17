@@ -3,7 +3,7 @@
 #include <math.h>
 
 
-#define tiempo (float)(4E3)
+#define tiempo (float)(4E5)
 #define dt (float)(1E-2)//Paso en tiempo
 #define dT (float)(0.001)//Paso de T*k_b
 
