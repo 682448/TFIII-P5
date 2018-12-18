@@ -14,7 +14,7 @@ void ini_ran(int SEMILLA);
 float RandomC(float Max,float Min);
 float Gauss(float m, float s);
 float F(float r, float r_ant, float r_pos, int i,int k);
-void Evoluciona(float t,int i, int j);
+void Evoluciona(float t,float dt,int i, int j);
 void crea_copia();
 // Definición de los parámetros usados en float ini_ran(int SEMILLA) y RandomC(float Max,float Min)  para descorrelacionar los números generados con rand()
 unsigned char ind_ran,ig1,ig2,ig3;
@@ -25,6 +25,7 @@ FILE *D1;
 float EtaOnM,KOnM,B,T,chi,dt;
 float r[N][D][2],v[N][D][3],z[N][D];
 float Long_ant[2],Long_pos[2],Long_N,R_G,Ree;
+int CongelaPrimeraParticula;// Si vale 1 la primera particula no evoluciona, si vale 0 evoluciona
 int main()
 {
     B=1;
@@ -32,11 +33,12 @@ int main()
     EtaOnM=1;
     dt=1E-2;
     scanf("%f",&T);
-
+    //T=0.1;
     chi=2*EtaOnM*T;
     ini_ran(123456789);
     D1=fopen("DataMean.csv","a+");
 
+    CongelaPrimeraParticula=1;
     // Doy las condiciones iniciales para la posición y la velocidad
     for(int i=0;i<N;i++)
     {
@@ -59,7 +61,7 @@ int main()
         }
       }
       R_CM[0]/=N;R_CM[1]/=N;R_CM[2]/=N;
-      //printf("%f\t%f\t%f\t\n",R_CM[0],R_CM[1],R_CM[2]);getchar();
+      //printf("%f\t%f\t%f\t\n",r[0][0][0],r[0][1][0],r[0][2][0]);getchar();
       // Calculo las longitudes que luego uso para calcular la fuerza
       for(int i=0;i<N;i++){
         Long_pos[0]=Long_pos[1]=Long_ant[0]=Long_ant[1]=0;
@@ -74,7 +76,7 @@ int main()
         Long_pos[1]=sqrt(Long_pos[1]);
         Long_ant[1]=sqrt(Long_ant[1]);
         for(int j=0;j<D;j++){// Hago que el sistema evolucione
-          Evoluciona(t,i,j);
+          Evoluciona(t,dt,i,j);
         }
         // Sumo las longitudes del polimero para todos los tiempos
         if(i<N-1)Long_N+=pow((Long_pos[0]-B),2);
@@ -133,7 +135,7 @@ float F(float r, float r_ant, float r_pos,int i,int k)
   }
 }
 
-void Evoluciona(float t,int i,int j)
+void Evoluciona(float t,float dt,int i,int j)
 {
   register float g11,g12,g21,g22;
 
@@ -144,7 +146,9 @@ void Evoluciona(float t,int i,int j)
 
   r[i][j][0]=r[i][j][0]+0.5*dt*(g11+g21);
   v[i][j][0]=v[i][j][0]+0.5*dt*(g12+g22)+z[i][j];
-
+  if(CongelaPrimeraParticula){
+    v[0][j][0]=sqrt(T); r[0][j][0]=v[0][j][0]*t*dt;
+  }
   v[i][j][2]+=v[i][j][0]*v[i][j][0];
 }
 
