@@ -6,8 +6,9 @@
 
 
 #define tiempo (float)(5E3)//Tiempo final aunque aquí en realidad es adimensional
-#define N 256
+#define N 64
 #define D 3
+#define cte (float)(-2.65)
 
 
 void ini_ran(int SEMILLA);
@@ -36,7 +37,9 @@ int main()
     //T=0.1;
     chi=2*EtaOnM*T;
     ini_ran(123456789);
-    D1=fopen("DataMean.csv","a+");
+    char noum[50];
+    scanf("%s\n",noum);
+    D1=fopen(noum,"a+");
 
     CongelaPrimeraParticula=1;
     // Doy las condiciones iniciales para la posición y la velocidad
@@ -98,16 +101,14 @@ int main()
     float r2_media,v2_media;
     r2_media=v2_media=0;
 
-    for(int i=0;i<N;i++)
-    {
-      for(int j=0;j<D;j++)
-        {
+    for(int i=0;i<N;i++){
+      for(int j=0;j<D;j++){
           v2_media+=v[i][j][2];
         }
     }
     Long_N/=((N-1)*tiempo/dt);// Esta es la longitud promedio en el tiempo de cada muelle
     v2_media/=(int)(N*tiempo/dt);// Esta es la velocidad promedio en el tiempo de cada partícula del polímero
-    fprintf(D1,"%d, %.2e, %.2f, %.2f, %.2f, %.1e, %.1e, %.2f, %.2f, %.2f, %.2e\n",N,T,B,EtaOnM,KOnM,tiempo,dt,R_G,Ree,0.5*v2_media,0.5*KOnM*Long_N);
+    fprintf(D1,"\n%d, %.2f, %.3f, %.2f, %.2f, %.2f, %.1e, %.1e, %.2f, %.2f, %.4f, %.4f\n",N,cte,T,B,EtaOnM,KOnM,tiempo,dt,R_G,Ree,0.5*v2_media,0.5*KOnM*Long_N);
 
 
     fclose(D1);
@@ -121,22 +122,18 @@ float F(float r, float r_ant, float r_pos,int i,int k)
   long_ant=r_ant-r;
   long_pos=r-r_pos;
   //return -K*r;
-  if(i==0)
-  {
+  if(i==0){
     return -KOnM*(r-r_pos)+KOnM*B*long_pos/Long_pos[k];
   }
-  else if(i==N-1)
-  {
-    return -KOnM*(r-r_ant)-KOnM*B*long_ant/Long_ant[k];
+  else if(i==N-1){
+    return -KOnM*(r-r_ant)-KOnM*B*long_ant/Long_ant[k]+cte;
   }
-  else
-  {
+  else{
     return -KOnM*(2*r-r_ant-r_pos)-KOnM*B*(long_ant/Long_ant[k]-long_pos/Long_pos[k]);
   }
 }
 
-void Evoluciona(float t,float dt,int i,int j)
-{
+void Evoluciona(float t,float dt,int i,int j){
   register float g11,g12,g21,g22;
 
   g11=v[i][j][0]+z[i][j];
@@ -152,20 +149,16 @@ void Evoluciona(float t,float dt,int i,int j)
   v[i][j][2]+=v[i][j][0]*v[i][j][0];
 }
 
-void crea_copia()
-{
-  for(int i=0;i<N;i++)
-  {
-    for(int j=0;j<D;j++)
-    {
+void crea_copia(){
+  for(int i=0;i<N;i++){
+    for(int j=0;j<D;j++){
       r[i][j][1]=r[i][j][0];
       v[i][j][1]=v[i][j][0];
     }
   }
 }
 
-void ini_ran(int SEMILLA)
-{
+void ini_ran(int SEMILLA){
     srand(SEMILLA);
     for(int k=0;k<256;k++)Wheel[k]=(rand()<<16)+rand();
     ind_ran=ig1=ig2=ig3=0;
