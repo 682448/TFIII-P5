@@ -6,16 +6,14 @@
 
 
 #define tiempo (float)(5E3)//Tiempo final aunque aquí en realidad es adimensional
-#define N 64
+#define N 65
 #define D 3
-#define cte (float)(-2.65)
-
-
-void ini_ran(int SEMILLA);
+#define cte (float)(4.0)
 float RandomC(float Max,float Min);
 float Gauss(float m, float s);
-float F(float r, float r_ant, float r_pos, int i,int k);
+float F(float r, float r_ant, float r_pos, int i,int j,int k);
 void Evoluciona(float t,float dt,int i, int j);
+void ini_ran(int SEMILLA);
 void crea_copia();
 // Definición de los parámetros usados en float ini_ran(int SEMILLA) y RandomC(float Max,float Min)  para descorrelacionar los números generados con rand()
 unsigned char ind_ran,ig1,ig2,ig3;
@@ -26,31 +24,33 @@ FILE *D1;
 float EtaOnM,KOnM,B,T,chi,dt;
 float r[N][D][2],v[N][D][3],z[N][D];
 float Long_ant[2],Long_pos[2],Long_N,R_G,Ree;
-int CongelaPrimeraParticula;// Si vale 1 la primera particula no evoluciona, si vale 0 evoluciona
+float Fconst[3];
 int main()
 {
-    B=1;
-    KOnM=100;
+    Fconst[1]=Fconst[2]=0;
+    Fconst[0]=cte;
+    B=1.04;
     EtaOnM=1;
-    dt=1E-2;
+    dt=1E-3;
     scanf("%f",&T);
-    //T=0.1;
+    scanf("%f",&KOnM);
     chi=2*EtaOnM*T;
     ini_ran(123456789);
     char noum[50];
     scanf("%s\n",noum);
-    D1=fopen(noum,"a+");
 
-    CongelaPrimeraParticula=1;
+    D1=fopen(noum,"a+");
     // Doy las condiciones iniciales para la posición y la velocidad
-    for(int i=0;i<N;i++)
-    {
-        for(int j=0;j<D;j++)
-        {
-          r[i][j][0]=i*B/sqrt(3); v[i][j][0]=sqrt(T);
-          v[i][j][2]=0;
+    for(int i=0;i<N;i++){
+        for(int j=0;j<D;j++){
+          r[i][j][0]=v[i][j][2]=0;
+          v[i][j][0]=0;
+          //printf("%f\n",pow(-1,(int)(RandomC(20,1)))); getchar();
         }
+        r[i][0][0]=i*B;
     }
+    v[0][0][0]=+10;
+    v[N-1][0][0]=-10;
     Long_N=R_G=Ree=0;
     for(int t=0;t<(int)(tiempo/dt);t++){
       // Ahora paso a calcuar el centro de masas
@@ -64,7 +64,7 @@ int main()
         }
       }
       R_CM[0]/=N;R_CM[1]/=N;R_CM[2]/=N;
-      //printf("%f\t%f\t%f\t\n",r[0][0][0],r[0][1][0],r[0][2][0]);getchar();
+      //if(t==0)printf("%f\t%f\t%f\t\n",R_CM[0],R_CM[1],R_CM[2]);getchar();
       // Calculo las longitudes que luego uso para calcular la fuerza
       for(int i=0;i<N;i++){
         Long_pos[0]=Long_pos[1]=Long_ant[0]=Long_ant[1]=0;
@@ -84,19 +84,17 @@ int main()
         // Sumo las longitudes del polimero para todos los tiempos
         if(i<N-1)Long_N+=pow((Long_pos[0]-B),2);
       }
-      for(int i=0;i<N;i++){
+      for(int i=0;i<N;i++){// Esto aculumla los términos cuadráticos del radio de giro
         for(int j=0;j<D;j++){
           R_G+=pow(r[i][j][1]-R_CM[j],2);
         }
       }
       // Distacia extremo a extremo
-      float aux=0;
-      for(int j=0;j<D;j++){
-        aux+=pow(r[0][j][1]-r[N-1][j][1],2);
-      }
-      Ree+=sqrt(aux);
+    Ree+=r[N-1][0][1]-r[0][0][1];
+      //printf("%f\n",Ree);getchar();
     }
     R_G/=(N*tiempo/dt);// Este es el radio de giro promedio en el tiempo
+    R_G=sqrt(R_G);
     Ree/=(tiempo/dt);// Esta es la distacia extremo a extremo promedio a lo largo del tiempo
     float r2_media,v2_media;
     r2_media=v2_media=0;
@@ -108,25 +106,25 @@ int main()
     }
     Long_N/=((N-1)*tiempo/dt);// Esta es la longitud promedio en el tiempo de cada muelle
     v2_media/=(int)(N*tiempo/dt);// Esta es la velocidad promedio en el tiempo de cada partícula del polímero
-    fprintf(D1,"\n%d, %.2f, %.3f, %.2f, %.2f, %.2f, %.1e, %.1e, %.2f, %.2f, %.4f, %.4f\n",N,cte,T,B,EtaOnM,KOnM,tiempo,dt,R_G,Ree,0.5*v2_media,0.5*KOnM*Long_N);
-
+    //fprintf(D1,"\n%d, %.2f, %.3f, %.2f, %.2f, %.2f, %.1e, %.1e, %.2f, %.2f, %.2f, %.2f\n",N,cte,T,B,EtaOnM,KOnM,tiempo,dt,R_G,Ree,0.5*v2_media/T,0.5*KOnM*Long_N/T);
+    fprintf(D1,"\n%d, %.2f, %.3f, %.2f, %.2f, %.2f, %.1e, %.1e, %.2f\n",N,cte,T,B,EtaOnM,KOnM,tiempo,dt,Ree);
 
     fclose(D1);
     return 0;
 }
 
 
-float F(float r, float r_ant, float r_pos,int i,int k)
+float F(float r, float r_ant, float r_pos,int i,int j,int k)
 {
   float long_ant,long_pos;
   long_ant=r_ant-r;
   long_pos=r-r_pos;
   //return -K*r;
   if(i==0){
-    return -KOnM*(r-r_pos)+KOnM*B*long_pos/Long_pos[k];
+    return -KOnM*(r-r_pos)+KOnM*B*long_pos/Long_pos[k]-Fconst[j];
   }
   else if(i==N-1){
-    return -KOnM*(r-r_ant)-KOnM*B*long_ant/Long_ant[k]+cte;
+    return -KOnM*(r-r_ant)-KOnM*B*long_ant/Long_ant[k]+Fconst[j];
   }
   else{
     return -KOnM*(2*r-r_ant-r_pos)-KOnM*B*(long_ant/Long_ant[k]-long_pos/Long_pos[k]);
@@ -137,15 +135,12 @@ void Evoluciona(float t,float dt,int i,int j){
   register float g11,g12,g21,g22;
 
   g11=v[i][j][0]+z[i][j];
-  g12=-EtaOnM*g11+F(r[i][j][1],r[i-1][j][1],r[i+1][j][1],i,0);
+  g12=-EtaOnM*g11+F(r[i][j][1],r[i-1][j][1],r[i+1][j][1],i,j,0);
   g21=v[i][j][0]+g12*dt;
-  g22=-EtaOnM*(v[i][j][0]+g12*dt)+F(r[i][j][1]+(v[i][j][0]+z[i][j])*dt,r[i-1][j][1]+(v[i-1][j][0]+z[i-1][j])*dt,r[i+1][j][1]+(v[i+1][j][0]+z[i+1][j])*dt,i,1);
+  g22=-EtaOnM*(v[i][j][0]+g12*dt)+F(r[i][j][1]+(v[i][j][0]+z[i][j])*dt,r[i-1][j][1]+(v[i-1][j][0]+z[i-1][j])*dt,r[i+1][j][1]+(v[i+1][j][0]+z[i+1][j])*dt,i,j,1);
 
   r[i][j][0]=r[i][j][0]+0.5*dt*(g11+g21);
   v[i][j][0]=v[i][j][0]+0.5*dt*(g12+g22)+z[i][j];
-  if(CongelaPrimeraParticula){
-    v[0][j][0]=sqrt(T); r[0][j][0]=v[0][j][0]*t*dt;
-  }
   v[i][j][2]+=v[i][j][0]*v[i][j][0];
 }
 
