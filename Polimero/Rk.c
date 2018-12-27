@@ -6,9 +6,9 @@
 
 
 #define tiempo (float)(5E3)//Tiempo final aunque aquí en realidad es adimensional
-#define N 65
+#define N 9
 #define D 3
-#define cte (float)(4.0)
+#define cte (float)(5.0)
 float RandomC(float Max,float Min);
 float Gauss(float m, float s);
 float F(float r, float r_ant, float r_pos, int i,int j,int k);
@@ -29,7 +29,7 @@ int main()
 {
     Fconst[1]=Fconst[2]=0;
     Fconst[0]=cte;
-    B=1.04;
+    B=1;
     EtaOnM=1;
     dt=1E-3;
     scanf("%f",&T);
