@@ -5,10 +5,10 @@
 
 
 
-#define tiempo (float)(5E3)//Tiempo final aunque aquí en realidad es adimensional
-#define N 9
+#define tiempo (float)(3E3)//Tiempo final aunque aquí en realidad es adimensional
+#define N 65
 #define D 3
-#define cte (float)(5.0)
+#define cte (float)(2.2)
 float RandomC(float Max,float Min);
 float Gauss(float m, float s);
 float F(float r, float r_ant, float r_pos, int i,int j,int k);
@@ -24,6 +24,7 @@ FILE *D1;
 float EtaOnM,KOnM,B,T,chi,dt;
 float r[N][D][2],v[N][D][3],z[N][D];
 float Long_ant[2],Long_pos[2],Long_N,R_G,Ree;
+double err,err1;
 float Fconst[3];
 int main()
 {
@@ -51,7 +52,7 @@ int main()
     }
     v[0][0][0]=+10;
     v[N-1][0][0]=-10;
-    Long_N=R_G=Ree=0;
+    Long_N=R_G=Ree=err=err1=0;
     for(int t=0;t<(int)(tiempo/dt);t++){
       // Ahora paso a calcuar el centro de masas
       float R_CM[3];
@@ -91,11 +92,18 @@ int main()
       }
       // Distacia extremo a extremo
     Ree+=r[N-1][0][1]-r[0][0][1];
-      //printf("%f\n",Ree);getchar();
+    err1+=(r[N-1][0][1]-r[0][0][1])*(r[N-1][0][1]-r[0][0][1]);
+    //printf("%f\n%f\n\n",Ree,Ree2);getchar();
     }
     R_G/=(N*tiempo/dt);// Este es el radio de giro promedio en el tiempo
     R_G=sqrt(R_G);
     Ree/=(tiempo/dt);// Esta es la distacia extremo a extremo promedio a lo largo del tiempo
+    for(int t=0;t<(int)(tiempo/dt);t++){
+      err+=pow(r[N-1][0][1]-r[0][0][1]-Ree,2);
+    }
+    err/=(tiempo/dt);
+    err1/=(tiempo/dt);
+    err=sqrt(err);
     float r2_media,v2_media;
     r2_media=v2_media=0;
 
@@ -107,7 +115,7 @@ int main()
     Long_N/=((N-1)*tiempo/dt);// Esta es la longitud promedio en el tiempo de cada muelle
     v2_media/=(int)(N*tiempo/dt);// Esta es la velocidad promedio en el tiempo de cada partícula del polímero
     //fprintf(D1,"\n%d, %.2f, %.3f, %.2f, %.2f, %.2f, %.1e, %.1e, %.2f, %.2f, %.2f, %.2f\n",N,cte,T,B,EtaOnM,KOnM,tiempo,dt,R_G,Ree,0.5*v2_media/T,0.5*KOnM*Long_N/T);
-    fprintf(D1,"\n%d, %.2f, %.3f, %.2f, %.2f, %.2f, %.1e, %.1e, %.2f\n",N,cte,T,B,EtaOnM,KOnM,tiempo,dt,Ree);
+    fprintf(D1,"\n%d, %.2f, %.3f, %.2f, %.2f, %.2f, %.1e, %.1e, %.2f, %.2f, %.2f, %.2f\n",N,cte,T,B,EtaOnM,KOnM,tiempo,dt,Ree,Ree-(N-1)*cte/KOnM,err,sqrt(err1-Ree*Ree));
 
     fclose(D1);
     return 0;
