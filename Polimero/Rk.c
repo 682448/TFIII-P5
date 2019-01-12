@@ -5,10 +5,10 @@
 
 
 
-#define tiempo (float)(3E3)//Tiempo final aunque aquí en realidad es adimensional
+#define tiempo (float)(1.8E3)//Tiempo final aunque aquí en realidad es adimensional
 #define N 65
 #define D 3
-#define cte (float)(2.2)
+#define cte (float)(10.0)
 float RandomC(float Max,float Min);
 float Gauss(float m, float s);
 float F(float r, float r_ant, float r_pos, int i,int j,int k);
