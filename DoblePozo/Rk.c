@@ -3,7 +3,7 @@
 #include <math.h>
 
 
-#define tiempo (float)(4E5)
+#define tiempo (float)(2E5)
 #define dt (float)(1E-2)//Paso en tiempo
 #define dT (float)(0.001)//Paso de T*k_b
 
@@ -48,7 +48,22 @@ int main()
     float x,v,D[3],EtaOnM,KOnM,PositiveX,NegativeX;
     EtaOnM=Eta/M; KOnM=K/M;
     D[0]=D[1]=D[2]=0;
-    x=0;  v=sqrt(T/M);
+    x=-1;  v=-sqrt(T/M);
+
+    for(int t=0;t<(int)(tiempo/dt);t++ )                                                 /*Integración mediante algoritmo rk-estocástico 2 orden*/
+    {
+        register float g11,g12,g21,g22,z; z=sqrt(chi*dt)*Gauss(0,1);
+        g11=v+z;                                                                         /*Calculo las funciones g11,g12,... para el rk estoc�stico*/
+        g12=-EtaOnM*g11/M+F(x,KOnM);
+        g21=v+g12*dt;
+        g22=-EtaOnM*(v+g12*dt)+F(x+g11*dt,KOnM);
+        x=x+0.5*dt*(g11+g21);                                                            /*Calculo posiciones y velocidades en cada momento*/
+        v=v+0.5*dt*(g12+g22)+z;
+
+        fprintf(D2,"%.3f, %.3f, %.3f\n",t*dt,x,v);
+        D[0]+=v*v; D[1]+=x*x; D[2]=x*x*x*x;
+    }
+    x=1;  v=-sqrt(T/M);
 
     for(int t=0;t<(int)(tiempo/dt);t++ )                                                 /*Integración mediante algoritmo rk-estocástico 2 orden*/
     {

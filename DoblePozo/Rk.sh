@@ -31,10 +31,11 @@ EOF
 $noum3
 $noum4
 EOF
+mv Data_Basico.csv "Data_T=${T}_B=${B}_Eta=${Eta}.csv"
 done
 done
 done
 
 rm Rk.out
-rm Data_Basico.csv
+
 
