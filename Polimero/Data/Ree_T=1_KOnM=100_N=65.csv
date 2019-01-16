@@ -1,5 +1,8 @@
 
 N,F,T,B,EtaOnM,KOnM,Tiempo,dt,Ree,Ree_best,err,err1
+N,F,T,B,EtaOnM,KOnM,Tiempo,dt,Ree,Ree_best,err,err1
+N,F,T,B,EtaOnM,KOnM,Tiempo,dt,Ree,Ree_best,err,err1
+N,F,T,B,EtaOnM,KOnM,Tiempo,dt,Ree,Ree_best,err,err1
 65, 0.00, 1.000, 1.00, 1.00, 100.00, 3.0e+03, 1.0e-03, 1.16, 1.16, 5.99, 7.83
 
 65, 0.20, 1.000, 1.00, 1.00, 100.00, 3.0e+03, 1.0e-03, 5.50, 5.37, 7.16, 7.21
