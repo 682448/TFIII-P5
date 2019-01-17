@@ -3,67 +3,70 @@
 #include <math.h>
 
 
-
-
 #define tiempo (float)(5E3)//Tiempo final aunque aquí en realidad es adimensional
-#define N 5
+#define Temperatura (float)(1)//Esto en realidad es energía pues hago T*k_b
+#define dT (float)(0.01)//Paso de T*k_b
+#define N 64
 #define D 3
 
-
+/*
+->ini_ran(int SEMILLA) inicia el array "Wheel" usado para obtener los números aleatorios
+->float RandomC(float Max,float Min) implementa el método Parisi-rapuano  descorrelacionando los números guardados en Wheel
+->box_muller(float m, float s) devuelve un número asociado con distribución gaussiana
+*/
 void ini_ran(int SEMILLA);
 float RandomC(float Max,float Min);
 float Gauss(float m, float s);
 float F(float r, float r_ant, float r_pos, int i,int k);
-void Evoluciona(float t,float dt,int i, int j);
+void Evoluciona(float t,int i, int j);
 void crea_copia();
-// Definición de los parámetros usados en float ini_ran(int SEMILLA) y RandomC(float Max,float Min)  para descorrelacionar los números generados con rand()
+/*Definición de los parámetros usados en float ini_ran(int SEMILLA) y RandomC(float Max,float Min)  para descorrelacionar los números generados con rand()*/
 unsigned char ind_ran,ig1,ig2,ig3;
 unsigned int Wheel[256],ir1;
-// Fichero
+/*
+Ficheros
+->En D1 se guardan los valores de temperatura, energía cinética y energía potencial
+Este fichero esta pensado para comprobar a partir de el la relación de Einstein y el teorema de equipartición de la energía
+->En D2 se guarda
+Esta pensado para comprobar la relación de fluctuación disipación
+*/
 FILE *D1;
 
 float EtaOnM,KOnM,B,T,chi,dt;
 float r[N][D][2],v[N][D][3],z[N][D];
-float Long_ant[2],Long_pos[2],Long_N,R_G,Ree;
-int CongelaPrimeraParticula;// Si vale 1 la primera particula no evoluciona, si vale 0 evoluciona
+float Long_ant[2],Long_pos[2],Long_N,Long_N2;
 int main()
 {
     B=1;
     KOnM=100;
     EtaOnM=1;
     dt=1E-2;
-    scanf("%f",&T);
-    //T=0.1;
+    T=1;
+
+
     chi=2*EtaOnM*T;
     ini_ran(123456789);
-    D1=fopen("DataMean.csv","a+");
+    D1=fopen("EquiparticionOnParticle.csv","a+");
 
-    CongelaPrimeraParticula=1;
     // Doy las condiciones iniciales para la posición y la velocidad
     for(int i=0;i<N;i++)
     {
         for(int j=0;j<D;j++)
         {
-          r[i][j][0]=i*B/sqrt(3); v[i][j][0]=sqrt(T);
+          r[i][j][0]=i*B/sqrt(3); v[i][j][0]=0;
           v[i][j][2]=0;
         }
     }
-    Long_N=R_G=Ree=0;
-    for(int t=0;t<(int)(tiempo/dt);t++){
-      // Ahora paso a calcuar el centro de masas
-      float R_CM[3];
-      R_CM[0]=R_CM[1]=R_CM[2]=0;
+    Long_N=Long_N2=0;
+
+    for(int t=0;t<(int)(tiempo/dt);t++)
+    {
       crea_copia();
       for(int i=0;i<N;i++)for(int j=0;j<D;j++)z[i][j]=sqrt(chi*dt)*Gauss(0,1);
-      for(int j=0;j<D;j++){
-        for(int i=0;i<N;i++){
-          R_CM[j]+=r[i][j][1];
-        }
-      }
-      R_CM[0]/=N;R_CM[1]/=N;R_CM[2]/=N;
-      //printf("%f\t%f\t%f\t\n",r[0][0][0],r[0][1][0],r[0][2][0]);getchar();
-      // Calculo las longitudes que luego uso para calcular la fuerza
-      for(int i=0;i<N;i++){
+
+      for(int i=0;i<N;i++)
+      {
+        //printf("-------Particula:%d-----\n",i);
         Long_pos[0]=Long_pos[1]=Long_ant[0]=Long_ant[1]=0;
         for(int k=0;k<D;k++){
             Long_pos[0]+=pow(r[i][k][1]-r[i+1][k][1],2);
@@ -71,30 +74,23 @@ int main()
             Long_pos[1]+=pow(r[i][k][1]+(v[i][k][1]+z[i][k])*dt-r[i+1][k][1]-(v[i+1][k][1]+z[i+1][k])*dt,2);
             Long_ant[1]+=pow(r[i][k][1]+(v[i][k][1]+z[i][k])*dt-r[i-1][k][1]-(v[i-1][k][1]+z[i-1][k])*dt,2);
         }
+
         Long_pos[0]=sqrt(Long_pos[0]);
         Long_ant[0]=sqrt(Long_ant[0]);
         Long_pos[1]=sqrt(Long_pos[1]);
         Long_ant[1]=sqrt(Long_ant[1]);
-        for(int j=0;j<D;j++){// Hago que el sistema evolucione
-          Evoluciona(t,dt,i,j);
-        }
-        // Sumo las longitudes del polimero para todos los tiempos
-        if(i<N-1)Long_N+=pow((Long_pos[0]-B),2);
-      }
-      for(int i=0;i<N;i++){
         for(int j=0;j<D;j++){
-          R_G+=pow(r[i][j][1]-R_CM[j],2);
+          Evoluciona(t,i,j);
         }
+        if(i<N-1){
+          Long_N+=pow((Long_pos[0]-B),2);
+          Long_N2+=pow((Long_pos[0]-B),4);
+        }
+
       }
-      // Distacia extremo a extremo
-      float aux=0;
-      for(int j=0;j<D;j++){
-        aux+=pow(r[0][j][1]-r[N-1][j][1],2);
-      }
-      Ree+=sqrt(aux);
     }
-    R_G/=(N*tiempo/dt);// Este es el radio de giro promedio en el tiempo
-    Ree/=(tiempo/dt);// Esta es la distacia extremo a extremo promedio a lo largo del tiempo
+
+    //fprintf(D1,"N,Temperatura,Cinetica,Potencial\n");
     float r2_media,v2_media;
     r2_media=v2_media=0;
 
@@ -105,9 +101,10 @@ int main()
           v2_media+=v[i][j][2];
         }
     }
-    Long_N/=((N-1)*tiempo/dt);// Esta es la longitud promedio en el tiempo de cada muelle
-    v2_media/=(int)(N*tiempo/dt);// Esta es la velocidad promedio en el tiempo de cada partícula del polímero
-    fprintf(D1,"%d, %.2e, %.2f, %.2f, %.2f, %.1e, %.1e, %.2f, %.2f, %.2f, %.2e\n",N,T,B,EtaOnM,KOnM,tiempo,dt,R_G,Ree,0.5*v2_media,0.5*KOnM*Long_N);
+    Long_N/=((N-1)*tiempo/dt);
+    Long_N2/=((N-1)*tiempo/dt);
+    v2_media/=(int)(N*tiempo/dt);
+    fprintf(D1,"%d, %.3f, %.3f, %.3f, %.3f\n",N,T,0.5*v2_media,0.5*KOnM*Long_N,0.5*KOnM*sqrt(Long_N2-Long_N*Long_N));
 
 
     fclose(D1);
@@ -135,7 +132,7 @@ float F(float r, float r_ant, float r_pos,int i,int k)
   }
 }
 
-void Evoluciona(float t,float dt,int i,int j)
+void Evoluciona(float t,int i,int j)
 {
   register float g11,g12,g21,g22;
 
@@ -146,9 +143,7 @@ void Evoluciona(float t,float dt,int i,int j)
 
   r[i][j][0]=r[i][j][0]+0.5*dt*(g11+g21);
   v[i][j][0]=v[i][j][0]+0.5*dt*(g12+g22)+z[i][j];
-  if(CongelaPrimeraParticula){
-    v[0][j][0]=sqrt(T); r[0][j][0]=v[0][j][0]*t*dt;
-  }
+
   v[i][j][2]+=v[i][j][0]*v[i][j][0];
 }
 
